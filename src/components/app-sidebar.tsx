@@ -1,0 +1,158 @@
+import { useEffect, useRef } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import {
+  Home,
+  FileText,
+  Image,
+  Zap,
+  Target,
+  BarChart3,
+  Users,
+  Settings,
+  MessageSquare,
+  UserCheck,
+  CreditCard,
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+const AppSidebar = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const { state, toggleSidebar } = useSidebar();
+  const collapsed = state === "collapsed";
+
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  function handleClickOutside(e: MouseEvent) {
+    const target = e.target as Node;
+
+    if (
+      sidebarRef.current &&
+      !sidebarRef.current.contains(target)
+    ) {
+      // Collapse only if open
+      if (!collapsed) {
+        toggleSidebar();
+      }
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, [collapsed, toggleSidebar]);
+
+  const sections = [
+    {
+      label: "Main",
+      items: [
+        { path: "/", icon: Home, label: "Dashboard" },
+        { path: "/piq", icon: FileText, label: "PIQ Form" },
+      ],
+    },
+    {
+      label: "Tests",
+      items: [
+        { path: "/ppdt", icon: Image, label: "PPDT Test" },
+        { path: "/wat", icon: Zap, label: "WAT Test" },
+        { path: "/srt", icon: Target, label: "SRT Test" },
+        { path: "/results", icon: BarChart3, label: "Results" },
+      ],
+    },
+    {
+      label: "Rooms",
+      items: [
+        { path: "/rooms/register", icon: Users, label: "Room Register" },
+        { path: "/rooms/join", icon: Users, label: "Room Join" },
+      ],
+    },
+    {
+      label: "Interview",
+      items: [{ path: "/interview", icon: UserCheck, label: "Interview" }],
+    },
+    {
+      label: "Other",
+      items: [
+        { path: "/subscription", icon: CreditCard, label: "Subscription" },
+        { path: "/feedback", icon: MessageSquare, label: "Feedback" },
+        { path: "/settings", icon: Settings, label: "Settings" },
+      ],
+    },
+  ];
+
+  const getNavCls = ({ isActive }: { isActive: boolean }) =>
+    isActive
+      ? "flex items-center gap-3 px-2 py-2 rounded-md bg-sidebar-accent text-sidebar-accent-foreground"
+      : "flex items-center gap-3 px-2 py-2 rounded-md hover:bg-sidebar-accent/50";
+
+  return (
+    <Sidebar
+      ref={sidebarRef}
+      collapsible="icon"
+      className="border-r border-sidebar-border"
+    >
+      {/* Brand Section */}
+      <SidebarHeader className="flex items-center justify-center px-3 py-3 border-b border-sidebar-border">
+        {collapsed ? (
+          <div className="text-lg font-bold text-sidebar-foreground">S</div>
+        ) : (
+          <h1 className="text-lg font-semibold text-sidebar-foreground">
+            SSBGPT
+          </h1>
+        )}
+      </SidebarHeader>
+
+      {/* Menu */}
+      <SidebarContent className="hide-scrollbar overflow-y-auto">
+        {sections.map((section) => (
+          <SidebarGroup key={section.label} className="py-0">
+            {!collapsed && (
+              <SidebarGroupLabel className="px-2 py-1 text-[11px] font-semibold text-sidebar-foreground/70 uppercase tracking-wide">
+                {section.label}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.path} className={getNavCls}>
+                        <item.icon className="w-4 h-4" />
+                        {!collapsed && <span>{item.label}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+
+      {/* Footer */}
+      {/* <SidebarFooter className="border-t border-sidebar-border">
+        {!collapsed && (
+          <div className="text-xs text-sidebar-foreground/70 space-y-1 px-2 py-2">
+            <p>User: {user?.email}</p>
+            <p>Version: 1.0.0</p>
+          </div>
+        )}
+      </SidebarFooter> */}
+    </Sidebar>
+  );
+};
+
+export default AppSidebar;
