@@ -45,6 +45,26 @@ serve(async (req) => {
       throw new Error("Failed to fetch user credits");
     }
 
+    // If no credits record exists, create one
+    if (!creditsData) {
+      const { data: newCreditsData, error: insertError } = await supabaseClient
+        .from("user_credits")
+        .insert({
+          user_id: user.id,
+          wat_credits: 5,
+          srt_credits: 5,
+          ppdt_credits: 3,
+          has_unlimited: false,
+        })
+        .select("*")
+        .single();
+
+      if (insertError) {
+        console.error("Credits insert error:", insertError);
+        throw new Error("Failed to create user credits");
+      }
+    }
+
     // Check for active subscription
     const { data: subscriptionData } = await supabaseClient
       .from("subscriptions")

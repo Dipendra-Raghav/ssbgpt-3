@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabaseClient as supabase } from '@/lib/supabase-client';
 import { toast } from '@/hooks/use-toast';
-import { DashboardQuotaPanel } from '@/components/DashboardQuotaPanel';
+
 
 interface StreakData {
   currentStreak: number;
@@ -147,12 +147,6 @@ const Index = () => {
           </p>
         </div>
   
-        {/* Quota Panel for logged-in users */}
-        {user && (
-          <div className="mb-8 max-w-sm mx-auto">
-            <DashboardQuotaPanel />
-          </div>
-        )}
 
         {/* Feature Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
