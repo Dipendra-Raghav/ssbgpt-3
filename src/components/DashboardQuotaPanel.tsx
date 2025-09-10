@@ -60,53 +60,51 @@ export function DashboardQuotaPanel() {
 
   return (
     <Card className="border-0 shadow-none">
-      <CardContent className="p-4">
+      <CardHeader className="p-4 pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Crown className="w-4 h-4 text-primary" />
+          Quota & Plan
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 pt-0">
         {hasActivePlan() ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">{subscription?.plan_name}</span>
-            </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">{subscription?.plan_name || 'Premium Plan'}</div>
             <Badge variant="default" className="text-xs">
               Unlimited Access
             </Badge>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <Image className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs">PPDT</span>
-                </div>
-                <Badge variant={getVariant(credits.ppdt_credits)} className="text-xs px-2 py-0">
-                  {formatCredits(credits.ppdt_credits, 'ppdt')}
-                </Badge>
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground mb-2">Cadet Free Plan</div>
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Image className="w-3 h-3 text-muted-foreground" />
+                <span>PPDT:</span>
               </div>
+              <Badge variant={getVariant(credits.ppdt_credits)} className="text-xs px-2 py-0">
+                {formatCredits(credits.ppdt_credits, 'ppdt')} remaining
+              </Badge>
             </div>
             
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs">WAT</span>
-                </div>
-                <Badge variant={getVariant(credits.wat_credits)} className="text-xs px-2 py-0">
-                  {formatCredits(credits.wat_credits, 'wat')}
-                </Badge>
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Zap className="w-3 h-3 text-muted-foreground" />
+                <span>WAT:</span>
               </div>
+              <Badge variant={getVariant(credits.wat_credits)} className="text-xs px-2 py-0">
+                {formatCredits(credits.wat_credits, 'wat')} remaining
+              </Badge>
             </div>
             
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <Target className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs">SRT</span>
-                </div>
-                <Badge variant={getVariant(credits.srt_credits)} className="text-xs px-2 py-0">
-                  {formatCredits(credits.srt_credits, 'srt')}
-                </Badge>
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <Target className="w-3 h-3 text-muted-foreground" />
+                <span>SRT:</span>
               </div>
+              <Badge variant={getVariant(credits.srt_credits)} className="text-xs px-2 py-0">
+                {formatCredits(credits.srt_credits, 'srt')} remaining
+              </Badge>
             </div>
             
             {(credits.wat_credits === 0 || credits.srt_credits === 0 || credits.ppdt_credits === 0) && (

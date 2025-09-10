@@ -259,7 +259,7 @@ const Subscription = () => {
 {plan.id !== 'cadet' && (
                   hasActivePlan() ? (
                     <Button variant="outline" className="w-full mt-6" disabled>
-                      {subscription?.plan_id === plan.id ? 'Current Plan' : 'Choose Plan'}
+                      {subscription?.plan_name === plan.name ? 'Current Plan' : 'Choose Plan'}
                     </Button>
                   ) : (
                     <Button
