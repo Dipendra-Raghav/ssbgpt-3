@@ -375,6 +375,17 @@ const WAT = () => {
       return;
     }
 
+    // Validate requested count before consuming credits
+    const maxWords = getMaxAllowedWords();
+    if (practiceCount > maxWords) {
+      toast({
+        title: 'Credit Limit Exceeded',
+        description: `You can only practice ${maxWords} words with your current credits.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!credits || credits.wat_credits <= 0) {
       setShowCreditPopup(true);
       return;
@@ -382,16 +393,19 @@ const WAT = () => {
 
     // Consume credit and start test
     try {
+      setLoading(true);
       const result = await consumeCredit('wat');
       if (result.success) {
-        startTest();
-        fetchCredits(); // Refresh credits display
+        await startTest();
+        await fetchCredits(); // Refresh credits display
       } else {
         setShowCreditPopup(true);
       }
     } catch (error) {
       console.error('Error consuming credit:', error);
       setShowCreditPopup(true);
+    } finally {
+      setLoading(false);
     }
   };
 

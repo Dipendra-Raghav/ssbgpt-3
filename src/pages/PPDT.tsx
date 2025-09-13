@@ -205,9 +205,22 @@ const PPDT = () => {
     };
   }, [isWritingPhase, writingTimeLeft, isPaused]);
 
+  const [starting, setStarting] = useState(false);
+
   const checkCreditsAndStart = async () => {
     if (hasActivePlan()) {
       startTest();
+      return;
+    }
+
+    // Validate requested count before consuming credits
+    const maxImages = getMaxAllowedImages();
+    if (practiceCount > maxImages) {
+      toast({
+        title: 'Credit Limit Exceeded',
+        description: `You can only practice ${maxImages} images with your current credits.`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -217,16 +230,19 @@ const PPDT = () => {
     }
 
     try {
+      setStarting(true);
       const result = await consumeCredit('ppdt');
       if (result.success) {
-        startTest();
-        fetchCredits();
+        await startTest();
+        await fetchCredits();
       } else {
         setShowCreditPopup(true);
       }
     } catch (error) {
       console.error('Error consuming credit:', error);
       setShowCreditPopup(true);
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -456,9 +472,9 @@ const PPDT = () => {
                 Max: {getMaxAllowedImages()} images {!hasActivePlan() && '(based on your credits)'}
               </p>
             </div>
-            <Button onClick={checkCreditsAndStart} size="lg" className="shadow-command">
+            <Button onClick={checkCreditsAndStart} size="lg" className="shadow-command" disabled={starting}>
               <Play className="w-4 h-4 mr-2" />
-              Start PPDT Practice ({practiceCount} images)
+              {starting ? 'Starting…' : `Start PPDT Practice (${practiceCount} images)`}
             </Button>
           </CardContent>
         </Card>

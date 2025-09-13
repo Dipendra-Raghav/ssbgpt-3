@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Shield, Check, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -92,7 +92,7 @@ const ShieldIcon = ({ starCount }: { starCount: number }) => {
       </div>
     </div>
   );
-};
+  };
 
 const Subscription = () => {
   const { user, session } = useAuth();
@@ -108,31 +108,34 @@ const Subscription = () => {
     });
   };
 
+  // Preload Razorpay on mount to avoid delay
+  useEffect(() => {
+    loadRazorpay();
+  }, []);
+
+  const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
+
   const handlePayment = async (planId: string, amount: number, planName: string) => {
     if (!user || !session) {
       toast.error('Please login to subscribe');
       return;
     }
 
+    setPayingPlanId(planId);
     try {
-      // Create subscription order
-      const { data: orderData, error: orderError } = await supabaseClient.functions.invoke('create-subscription', {
-        body: {
-          planId,
-          planName,
-          amount,
-          currency: 'INR',
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      // Create subscription order and ensure Razorpay is loaded in parallel
+      const [orderResult] = await Promise.all([
+        supabaseClient.functions.invoke('create-subscription', {
+          body: { planId, planName, amount, currency: 'INR' },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }),
+        loadRazorpay(),
+      ]);
 
+      const { data: orderData, error: orderError } = orderResult as any;
       if (orderError) throw orderError;
 
-      const res = await loadRazorpay();
-
-      if (!res) {
+      if (!window.Razorpay) {
         toast.error('Razorpay SDK failed to load. Please check your internet connection.');
         return;
       }
@@ -172,19 +175,16 @@ const Subscription = () => {
           name: user.user_metadata?.full_name || '',
           email: user.email || '',
         },
-        notes: {
-          plan: planId,
-          planName: planName,
-        },
-        theme: {
-          color: '#2563eb',
-        },
+        notes: { plan: planId, planName: planName },
+        theme: { color: '#2563eb' },
       };
 
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
     } catch (error: any) {
       toast.error(`Failed to create subscription: ${error.message}`);
+    } finally {
+      setPayingPlanId(null);
     }
   };
 
@@ -265,8 +265,9 @@ const Subscription = () => {
                     <Button
                       className="w-full mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
                       onClick={() => handlePayment(plan.id, getPlanAmount(plan), plan.name)}
+                      disabled={payingPlanId === plan.id}
                     >
-                      Choose Plan
+                      {payingPlanId === plan.id ? 'Opening Razorpay…' : 'Choose Plan'}
                     </Button>
                   )
                 )}

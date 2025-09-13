@@ -147,9 +147,22 @@ const SRT = () => {
     };
   }, [isActive, totalTimeLeft]);
 
+  const [starting, setStarting] = useState(false);
+
   const checkCreditsAndStart = async () => {
     if (hasActivePlan()) {
       startTest();
+      return;
+    }
+
+    // Validate requested count before consuming credits
+    const maxSituations = getMaxAllowedSituations();
+    if (practiceCount > maxSituations) {
+      toast({
+        title: 'Credit Limit Exceeded',
+        description: `You can only practice ${maxSituations} situations with your current credits.`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -159,16 +172,19 @@ const SRT = () => {
     }
 
     try {
+      setStarting(true);
       const result = await consumeCredit('srt');
       if (result.success) {
-        startTest();
-        fetchCredits();
+        await startTest();
+        await fetchCredits();
       } else {
         setShowCreditPopup(true);
       }
     } catch (error) {
       console.error('Error consuming credit:', error);
       setShowCreditPopup(true);
+    } finally {
+      setStarting(false);
     }
   };
 
@@ -387,9 +403,9 @@ const SRT = () => {
                 Max: {getMaxAllowedSituations()} situations {!hasActivePlan() && '(based on your credits)'}
               </p>
             </div>
-            <Button onClick={checkCreditsAndStart} size="lg" className="shadow-command">
+            <Button onClick={checkCreditsAndStart} size="lg" className="shadow-command" disabled={starting}>
               <Play className="w-4 h-4 mr-2" />
-              Start SRT Practice ({practiceCount} situations)
+              {starting ? 'Starting…' : `Start SRT Practice (${practiceCount} situations)`}
             </Button>
           </CardContent>
         </Card>
