@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { Youtube, Instagram, Linkedin } from "lucide-react"; 
 import {
   Home,
   FileText,
@@ -149,15 +150,35 @@ useEffect(() => {
         ))}
       </SidebarContent>
 
-      {/* Footer */}
-      {/* <SidebarFooter className="border-t border-sidebar-border">
-        {!collapsed && (
-          <div className="text-xs text-sidebar-foreground/70 space-y-1 px-2 py-2">
-            <p>User: {user?.email}</p>
-            <p>Version: 1.0.0</p>
-          </div>
-        )}
-      </SidebarFooter> */}
+{/* Footer */}
+<SidebarFooter className="border-t border-sidebar-border">
+  <div className="flex items-center justify-center gap-4 py-3">
+    <a
+      href="https://www.youtube.com/yourchannel"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sidebar-foreground hover:text-red-500"
+    >
+      <Youtube className="w-5 h-5" />
+    </a>
+    <a
+      href="https://www.instagram.com/yourprofile"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sidebar-foreground hover:text-pink-500"
+    >
+      <Instagram className="w-5 h-5" />
+    </a>
+    <a
+      href="https://www.linkedin.com/in/yourprofile"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-sidebar-foreground hover:text-blue-500"
+    >
+      <Linkedin className="w-5 h-5" />
+    </a>
+  </div>
+</SidebarFooter>
     </Sidebar>
   );
 };
