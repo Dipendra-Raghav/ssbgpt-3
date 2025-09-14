@@ -537,6 +537,47 @@ export type Database = {
         }
         Relationships: []
       }
+      session_uploads: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          public_url: string
+          session_id: string
+          test_type: string
+          upload_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          public_url: string
+          session_id: string
+          test_type: string
+          upload_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          public_url?: string
+          session_id?: string
+          test_type?: string
+          upload_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_uploads_upload_session_id_fkey"
+            columns: ["upload_session_id"]
+            isOneToOne: false
+            referencedRelation: "upload_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       srt_situations: {
         Row: {
           created_at: string
@@ -638,6 +679,39 @@ export type Database = {
           session_id?: string | null
           test_type?: string
           time_taken?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      upload_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          is_active: boolean
+          session_id: string
+          test_type: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          session_id: string
+          test_type: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          session_id?: string
+          test_type?: string
+          token?: string
           user_id?: string
         }
         Relationships: []

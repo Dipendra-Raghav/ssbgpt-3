@@ -3,10 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, Upload, Check, X, ArrowLeft } from 'lucide-react';
+import { Camera, Upload, Check, X, ArrowLeft, Smartphone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
 interface UploadedFile {
   file: File;
@@ -19,46 +18,86 @@ interface UploadedFile {
 const MobileUpload = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const sessionId = searchParams.get('sessionId');
-  const testType = searchParams.get('testType');
+  const token = searchParams.get('token');
+  
+  const [uploadSession, setUploadSession] = useState<any>(null);
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
   
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Redirect if missing parameters
+  // Validate token and get session info
   useEffect(() => {
-    if (!sessionId || !testType) {
-      toast({
-        title: 'Invalid Link',
-        description: 'This upload link is invalid or expired.',
-        variant: 'destructive',
-      });
-      navigate('/');
-    }
-  }, [sessionId, testType, navigate]);
+    const validateToken = async () => {
+      if (!token) {
+        setSessionValid(false);
+        toast({
+          title: 'Invalid Link',
+          description: 'This upload link is missing a token.',
+          variant: 'destructive',
+        });
+        navigate('/');
+        return;
+      }
 
-  // Upload image to Supabase storage
+      try {
+        // Validate the token by checking if session exists and is active
+        const { data, error } = await supabase
+          .from('upload_sessions')
+          .select('*')
+          .eq('token', token)
+          .eq('is_active', true)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (error || !data) {
+          setSessionValid(false);
+          toast({
+            title: 'Invalid or Expired Link',
+            description: 'This upload link is invalid or has expired.',
+            variant: 'destructive',
+          });
+          navigate('/');
+          return;
+        }
+
+        setUploadSession(data);
+        setSessionValid(true);
+      } catch (error) {
+        console.error('Error validating token:', error);
+        setSessionValid(false);
+        toast({
+          title: 'Error',
+          description: 'Failed to validate upload link.',
+          variant: 'destructive',
+        });
+        navigate('/');
+      }
+    };
+
+    validateToken();
+  }, [token, navigate]);
+
+  // Upload image via edge function (no auth required)
   const uploadImage = async (file: File): Promise<string | null> => {
-    if (!user || !sessionId) return null;
+    if (!token || !uploadSession) return null;
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${sessionId}_mobile_${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('test-responses')
-        .upload(fileName, file);
+      const formData = new FormData();
+      formData.append('token', token);
+      formData.append('file', file);
 
-      if (uploadError) throw uploadError;
+      const response = await supabase.functions.invoke('mobile-upload', {
+        body: formData
+      });
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('test-responses')
-        .getPublicUrl(fileName);
+      if (response.error) {
+        throw new Error(response.error.message || 'Upload failed');
+      }
 
-      return publicUrl;
+      return response.data.url;
     } catch (error: any) {
       console.error('Upload error:', error);
       throw error;
@@ -139,15 +178,27 @@ const MobileUpload = () => {
     setUploadedFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  // Check if user is authenticated
-  if (!user) {
+  // Show loading or error state
+  if (sessionValid === null) {
+    return (
+      <div className="container mx-auto p-6 max-w-md">
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">Validating upload link...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (sessionValid === false) {
     return (
       <div className="container mx-auto p-6 max-w-md">
         <Card>
           <CardContent className="pt-6 text-center">
             <Alert>
               <AlertDescription>
-                Please sign in to upload files. You'll be redirected to the main app.
+                This upload link is invalid or has expired.
               </AlertDescription>
             </Alert>
             <Button onClick={() => navigate('/')} className="mt-4">
@@ -173,9 +224,12 @@ const MobileUpload = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Main App
         </Button>
-        <h1 className="text-2xl font-bold">Upload Your Answers</h1>
+        <div className="flex items-center gap-2 mb-2">
+          <Smartphone className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-bold">Upload Your Answers</h1>
+        </div>
         <p className="text-muted-foreground text-sm mt-1">
-          Test: {testType?.toUpperCase()} • Session: {sessionId?.slice(-8)}
+          Test: {uploadSession?.test_type?.toUpperCase()} • Session: {uploadSession?.session_id?.slice(-8)}
         </p>
       </div>
 

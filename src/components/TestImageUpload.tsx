@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -7,6 +7,7 @@ import { Camera, Monitor, QrCode, Upload, Check, X, Smartphone, AlertCircle } fr
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { useUploadManager } from '@/hooks/useUploadManager';
+import { supabase } from '@/integrations/supabase/client';
 import QRCode from 'qrcode';
 
 interface UploadedFile {
@@ -43,11 +44,62 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // Listen for real-time uploads from mobile
+  useEffect(() => {
+    const channel = supabase
+      .channel('session-uploads')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'session_uploads',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          console.log('New mobile upload detected:', payload);
+          const upload = payload.new;
+          
+          // Create a File object from the upload data for compatibility
+          const mockFile = new File([''], upload.file_path.split('/').pop() || 'mobile_upload.jpg', {
+            type: 'image/jpeg'
+          });
+          
+          const newFile: UploadedFile = {
+            file: mockFile,
+            id: upload.id,
+            status: 'success',
+            url: upload.public_url
+          };
+          
+          setUploadedFiles(prev => [...prev, newFile]);
+          
+          toast({
+            title: 'Mobile Upload Received',
+            description: 'File uploaded from your phone successfully!',
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
+
   // Generate QR code for mobile upload
   const generateQRCode = async () => {
     try {
-      const uploadUrl = `${window.location.origin}/mobile-upload?sessionId=${sessionId}&testType=${testType}`;
-      const qrDataUrl = await QRCode.toDataURL(uploadUrl, {
+      // Create upload session via edge function
+      const { data, error } = await supabase.functions.invoke('create-upload-session', {
+        body: { sessionId, testType }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to create upload session');
+      }
+
+      const qrDataUrl = await QRCode.toDataURL(data.uploadUrl, {
         width: 256,
         margin: 2,
         color: {
@@ -57,7 +109,8 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
       });
       setQrCodeUrl(qrDataUrl);
       setShowQRDialog(true);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('QR Code generation error:', error);
       toast({
         title: 'QR Code Error',
         description: 'Failed to generate QR code. Please try again.',
@@ -407,7 +460,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
             </div>
             <Alert>
               <AlertDescription>
-                Files uploaded from your phone will appear in the upload status above automatically.
+                Files uploaded from your phone will sync automatically and appear above. Keep this page open to see your uploads.
               </AlertDescription>
             </Alert>
           </div>

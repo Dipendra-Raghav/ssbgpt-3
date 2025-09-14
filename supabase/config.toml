@@ -1,1 +1,25 @@
 project_id = "xwwzrahhimaaskjvsybk"
+
+[functions.create-upload-session]
+verify_jwt = true
+
+[functions.mobile-upload]
+verify_jwt = false
+
+[functions.openai-evaluation]
+verify_jwt = true
+
+[functions.create-subscription]
+verify_jwt = true
+
+[functions.daily-credits-refill]
+verify_jwt = false
+
+[functions.manage-credits]
+verify_jwt = true
+
+[functions.send-subscription-email]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false
