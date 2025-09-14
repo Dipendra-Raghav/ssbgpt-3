@@ -106,7 +106,7 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { userId, testType, responseIds } = await req.json();
+    const { userId, testType, responseIds, finalImageUrl } = await req.json();
 
     console.log('Processing OpenAI evaluation for user:', userId, 'test:', testType);
 
@@ -212,8 +212,8 @@ Provide evaluation focusing on psychological insights, word associations, senten
       throw new Error(`Unsupported test type: ${testType}. Supported types are: ppdt, srt, wat`);
     }
 
-    // Check if any responses have images
-    const hasImages = responses.some(r => r.response_image_url);
+    // Check if any responses have images or if there's a final uploaded image
+    const hasImages = responses.some(r => r.response_image_url) || finalImageUrl;
     
     if (hasImages) {
       // Include images in the message
@@ -221,7 +221,7 @@ Provide evaluation focusing on psychological insights, word associations, senten
         { type: 'text', text: userContent }
       ];
       
-      // Add images to content
+      // Add individual response images to content
       responses.forEach((response, index) => {
         if (response.response_image_url) {
           content.push({
@@ -232,6 +232,16 @@ Provide evaluation focusing on psychological insights, word associations, senten
           });
         }
       });
+      
+      // Add the final uploaded image if it exists
+      if (finalImageUrl) {
+        content.push({
+          type: 'image_url',
+          image_url: {
+            url: finalImageUrl
+          }
+        });
+      }
       
       messages.push({
         role: 'user',
