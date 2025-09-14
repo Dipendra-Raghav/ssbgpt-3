@@ -31,11 +31,15 @@ const MobileUpload = () => {
   // Validate token and get session info
   useEffect(() => {
     const validateToken = async () => {
+      console.log('MobileUpload: Checking token:', token);
+      console.log('MobileUpload: Search params:', searchParams.toString());
+      
       if (!token) {
+        console.error('MobileUpload: No token found in URL parameters');
         setSessionValid(false);
         toast({
           title: 'Invalid Link',
-          description: 'This upload link is missing a token.',
+          description: 'This upload link is missing a token. Please generate a new QR code.',
           variant: 'destructive',
         });
         navigate('/');

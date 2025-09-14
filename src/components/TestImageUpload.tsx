@@ -90,15 +90,27 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
   // Generate QR code for mobile upload
   const generateQRCode = async () => {
     try {
+      console.log('Creating upload session for:', { sessionId, testType });
+      
       // Create upload session via edge function
       const { data, error } = await supabase.functions.invoke('create-upload-session', {
         body: { sessionId, testType }
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
+        console.error('Edge function error:', error);
         throw new Error(error.message || 'Failed to create upload session');
       }
 
+      if (!data || !data.uploadUrl) {
+        console.error('Invalid response from create-upload-session:', data);
+        throw new Error('Invalid response from upload session creation');
+      }
+
+      console.log('Generated upload URL:', data.uploadUrl);
+      
       const qrDataUrl = await QRCode.toDataURL(data.uploadUrl, {
         width: 256,
         margin: 2,
@@ -113,7 +125,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
       console.error('QR Code generation error:', error);
       toast({
         title: 'QR Code Error',
-        description: 'Failed to generate QR code. Please try again.',
+        description: `Failed to generate QR code: ${error.message}`,
         variant: 'destructive',
       });
     }
