@@ -595,12 +595,18 @@ const SRT = () => {
                           setEvaluationLoading(true);
                           setEvaluationError(null);
                           
+                          console.log('Processing evaluation for:', { userId: user?.id, testType: 'srt', responseCount: responses.length });
+                          
                           let finalImageUrl = null;
                           if (uploadedImage) {
+                            console.log('Uploading final image...');
                             finalImageUrl = await uploadImage(uploadedImage);
+                            console.log('Final image uploaded:', finalImageUrl);
                           }
 
                           const responseIds = responses.map(r => r.id);
+                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'srt', responseIds, finalImageUrl });
+                          
                           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
                             body: {
                               userId: user?.id,
@@ -610,7 +616,12 @@ const SRT = () => {
                             }
                           });
                           
-                          if (error) throw error;
+                          console.log('Evaluation response:', { data, error });
+                          
+                          if (error) {
+                            console.error('Supabase function error:', error);
+                            throw error;
+                          }
                           
                           toast({
                             title: "Evaluation Complete!",

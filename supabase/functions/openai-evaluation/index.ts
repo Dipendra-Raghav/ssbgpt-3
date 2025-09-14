@@ -112,8 +112,11 @@ serve(async (req) => {
 
     // Validate required parameters
     if (!userId || !testType || !responseIds || !Array.isArray(responseIds) || responseIds.length === 0) {
+      console.error('Missing required parameters:', { userId, testType, responseIds });
       throw new Error('Missing required parameters: userId, testType, and responseIds array are required');
     }
+
+    console.log('Validated parameters:', { userId, testType, responseIds: responseIds.length, finalImageUrl: !!finalImageUrl });
 
     // Fetch test responses with their associated words/situations
     const { data: responses, error: responsesError } = await supabase
@@ -254,6 +257,8 @@ Provide evaluation focusing on psychological insights, word associations, senten
         content: userContent
       });
     }
+
+    console.log('Sending evaluation request to OpenAI with messages:', JSON.stringify(messages, null, 2));
 
     // Call OpenAI Chat Completions API with retry logic
     let openAIResponse;

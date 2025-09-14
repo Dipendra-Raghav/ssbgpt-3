@@ -624,23 +624,34 @@ const WAT = () => {
                         setIsEvaluating(true);
                         setEvaluationError(null);
                         
-                       try {
-                         let finalImageUrl = null;
-                         if (uploadedImage) {
-                           finalImageUrl = await uploadImage(uploadedImage);
-                         }
+        console.log('Processing evaluation for:', { userId: user?.id, testType: 'wat', responseCount: responses.length });
+        
+        try {
+          let finalImageUrl = null;
+          if (uploadedImage) {
+            console.log('Uploading final image...');
+            finalImageUrl = await uploadImage(uploadedImage);
+            console.log('Final image uploaded:', finalImageUrl);
+          }
 
-                         const responseIds = responses.map(r => r.id);
-                         const { data, error } = await supabase.functions.invoke('openai-evaluation', {
-                           body: {
-                             userId: user?.id,
-                             testType: 'wat',
-                             responseIds,
-                             finalImageUrl
-                           }
-                         });
-                         
-                         if (error) throw error;
+          const responseIds = responses.map(r => r.id);
+          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'wat', responseIds, finalImageUrl });
+          
+          const { data, error } = await supabase.functions.invoke('openai-evaluation', {
+            body: {
+              userId: user?.id,
+              testType: 'wat',
+              responseIds,
+              finalImageUrl
+            }
+          });
+          
+          console.log('Evaluation response:', { data, error });
+          
+          if (error) {
+            console.error('Supabase function error:', error);
+            throw error;
+          }
                           
                          toast({
                            title: "Evaluation Complete!",

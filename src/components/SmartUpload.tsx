@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Camera, Monitor, QrCode, Upload, Check, X, Smartphone } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
+import { MinimalUploadDisplay } from './MinimalUploadDisplay';
 import QRCode from 'qrcode';
 
 interface UploadedFile {
@@ -226,55 +227,31 @@ export const SmartUpload: React.FC<SmartUploadProps> = ({
         </CardContent>
       </Card>
 
-      {/* Uploaded Files Status */}
+      {/* Minimal Upload Display */}
       {uploadedFiles.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Upload Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {uploadedFiles.map((file) => (
-              <div key={file.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium text-sm truncate">{file.file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.file.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  {file.status === 'uploading' && (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-muted-foreground">Uploading...</span>
-                    </div>
-                  )}
-                  
-                  {file.status === 'success' && (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <Check className="w-4 h-4" />
-                      <span className="text-sm font-medium">Uploaded ✅</span>
-                    </div>
-                  )}
-                  
-                  {file.status === 'error' && (
-                    <div className="flex items-center gap-2 text-red-600">
-                      <X className="w-4 h-4" />
-                      <span className="text-sm font-medium">Failed ❌</span>
-                    </div>
-                  )}
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(file.id)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <CardContent className="pt-6">
+            <div className="mb-3">
+              <p className="text-sm font-medium">
+                Upload Status ({uploadedFiles.filter(f => f.status === 'success').length} of {uploadedFiles.length} files uploaded)
+              </p>
+            </div>
+            <MinimalUploadDisplay 
+              files={uploadedFiles.map(file => ({
+                id: file.id,
+                name: file.file.name,
+                size: file.file.size,
+                status: file.status,
+                onRemove: removeFile
+              }))}
+            />
+            {hasFailedUploads && (
+              <Alert className="mt-3">
+                <AlertDescription className="text-sm">
+                  Some files failed to upload. Please remove failed uploads and try again.
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       )}
