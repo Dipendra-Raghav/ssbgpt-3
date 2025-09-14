@@ -28,85 +28,90 @@ const MobileUpload = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Validate token and get session info
-  useEffect(() => {
-    const validateToken = async () => {
-      console.log('MobileUpload: Checking token:', token);
-      console.log('MobileUpload: Search params:', searchParams.toString());
-      
-      if (!token) {
-        console.error('MobileUpload: No token found in URL parameters');
+// Validate token and get session info (via public edge function)
+useEffect(() => {
+  const validateToken = async () => {
+    console.log('MobileUpload: Checking token:', token);
+    console.log('MobileUpload: Search params:', searchParams.toString());
+    
+    if (!token) {
+      console.error('MobileUpload: No token found in URL parameters');
+      setSessionValid(false);
+      toast({
+        title: 'Invalid Link',
+        description: 'This upload link is missing a token. Please generate a new QR code.',
+        variant: 'destructive',
+      });
+      navigate('/');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-upload-session', {
+        body: { token }
+      });
+
+      if (error || !data?.valid) {
         setSessionValid(false);
         toast({
-          title: 'Invalid Link',
-          description: 'This upload link is missing a token. Please generate a new QR code.',
+          title: 'Invalid or Expired Link',
+          description: 'This upload link is invalid or has expired.',
           variant: 'destructive',
         });
         navigate('/');
         return;
       }
 
-      try {
-        // Validate the token by checking if session exists and is active
-        const { data, error } = await supabase
-          .from('upload_sessions')
-          .select('*')
-          .eq('token', token)
-          .eq('is_active', true)
-          .gt('expires_at', new Date().toISOString())
-          .single();
-
-        if (error || !data) {
-          setSessionValid(false);
-          toast({
-            title: 'Invalid or Expired Link',
-            description: 'This upload link is invalid or has expired.',
-            variant: 'destructive',
-          });
-          navigate('/');
-          return;
-        }
-
-        setUploadSession(data);
-        setSessionValid(true);
-      } catch (error) {
-        console.error('Error validating token:', error);
-        setSessionValid(false);
-        toast({
-          title: 'Error',
-          description: 'Failed to validate upload link.',
-          variant: 'destructive',
-        });
-        navigate('/');
-      }
-    };
-
-    validateToken();
-  }, [token, navigate]);
-
-  // Upload image via edge function (no auth required)
-  const uploadImage = async (file: File): Promise<string | null> => {
-    if (!token || !uploadSession) return null;
-
-    try {
-      const formData = new FormData();
-      formData.append('token', token);
-      formData.append('file', file);
-
-      const response = await supabase.functions.invoke('mobile-upload', {
-        body: formData
+      setUploadSession(data.session);
+      setSessionValid(true);
+    } catch (error) {
+      console.error('Error validating token:', error);
+      setSessionValid(false);
+      toast({
+        title: 'Error',
+        description: 'Failed to validate upload link.',
+        variant: 'destructive',
       });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Upload failed');
-      }
-
-      return response.data.url;
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      throw error;
+      navigate('/');
     }
   };
+
+  validateToken();
+}, [token, navigate]);
+
+// Upload image via edge function (no auth required)
+const uploadImage = async (file: File): Promise<string | null> => {
+  if (!token || !uploadSession) return null;
+
+  try {
+    const SUPABASE_URL = "https://xwwzrahhimaaskjvsybk.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3d3pyYWhoaW1hYXNranZzeWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1MzA3MTgsImV4cCI6MjA2OTEwNjcxOH0.kMlJan6li4mnyfpKUo0_jTd6_1-Bh6rXGaBNv0lJHdM";
+
+    const formData = new FormData();
+    formData.append('token', token);
+    formData.append('file', file);
+
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/mobile-upload`, {
+      method: 'POST',
+      headers: {
+        // Provide apikey for public edge function
+        'apikey': SUPABASE_ANON_KEY,
+      },
+      body: formData,
+    });
+
+    if (!resp.ok) {
+      const errText = await resp.text().catch(() => '');
+      throw new Error(`Upload failed (${resp.status}): ${errText}`);
+    }
+
+    const json = await resp.json();
+    return json.url as string;
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    throw error;
+  }
+};
 
   // Handle camera capture
   const handleCameraCapture = () => {
