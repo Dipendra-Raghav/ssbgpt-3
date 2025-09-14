@@ -26,6 +26,7 @@ import { EvaluationLoading } from '@/components/ui/evaluation-loading';
 import { useCredits } from '@/hooks/useCredits';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CreditPopup } from '@/components/CreditPopup';
+import { TestImageUpload } from '@/components/TestImageUpload';
 
 interface WATWord {
   id: string;
@@ -587,36 +588,20 @@ const WAT = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Image Upload Section */}
+                {/* Enhanced Image Upload Section */}
                 <div className="border-t pt-4">
-                  <div className="flex items-center gap-4 mb-3">
-                    <Label htmlFor="finalImageUpload" className="text-sm font-medium">
-                      Optional: Upload handwritten response image:
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="finalImageUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => document.getElementById('finalImageUpload')?.click()}
-                      >
-                        <Camera className="w-4 h-4 mr-2" />
-                        {uploadedImage ? 'Change Image' : 'Upload Image'}
-                      </Button>
-                      {uploadedImage && (
-                        <span className="text-sm text-muted-foreground flex items-center">
-                          <FileImage className="w-4 h-4 mr-1" />
-                          {uploadedImage.name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <TestImageUpload
+                    onFilesUploaded={(files) => {
+                      if (files.length > 0) {
+                        setUploadedImage(files[0]);
+                      }
+                    }}
+                    sessionId={sessionId}
+                    testType="wat"
+                    maxFiles={3}
+                    currentUploadedImage={uploadedImage}
+                    onImageChange={setUploadedImage}
+                  />
                 </div>
 
                 {evaluationError && (

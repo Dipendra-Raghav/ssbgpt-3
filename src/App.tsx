@@ -24,6 +24,7 @@ import RoomRegister from "./pages/RoomRegister";
 import RoomJoin from "./pages/RoomJoin";
 import RoomSession from "./pages/RoomSession";
 import Subscription from "./pages/Subscription";
+import MobileUpload from "./pages/MobileUpload";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 
@@ -128,6 +129,9 @@ const AppContent = () => {
                   <Subscription />
                 </ProtectedRoute>
               } />
+              
+              {/* Mobile upload route - accessible without sidebar */}
+              <Route path="/mobile-upload" element={<MobileUpload />} />
 
               <Route path="*" element={<NotFound />} />
             </Routes>
