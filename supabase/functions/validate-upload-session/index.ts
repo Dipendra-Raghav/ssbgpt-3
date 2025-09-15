@@ -47,7 +47,6 @@ serve(async (req) => {
       .from('upload_sessions')
       .select('*')
       .eq('token', token)
-      .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .maybeSingle();
 
@@ -59,9 +58,39 @@ serve(async (req) => {
       );
     }
 
+    // If request intends to deactivate/close the session
+    if (req.method !== 'GET') {
+      let action: string | null = null;
+      try {
+        const body = await req.json();
+        action = body?.action ?? null;
+      } catch (_) {}
+
+      if (action === 'deactivate' || action === 'close') {
+        const { error: updateError } = await supabaseClient
+          .from('upload_sessions')
+          .update({ is_active: false })
+          .eq('id', session.id);
+        if (updateError) {
+          console.error('validate-upload-session: failed to deactivate session', updateError);
+          return new Response(
+            JSON.stringify({ valid: true, closed: false, error: 'Failed to close session' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+          );
+        }
+        return new Response(
+          JSON.stringify({ valid: true, closed: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Only treat as valid if still active
+    const isActive = !!session.is_active && new Date(session.expires_at) > new Date();
+
     return new Response(
       JSON.stringify({
-        valid: true,
+        valid: isActive,
         session: {
           id: session.id,
           user_id: session.user_id,

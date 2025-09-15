@@ -344,14 +344,29 @@ const uploadImage = async (file: File): Promise<string | null> => {
 
       {/* Success Message */}
       {successfulUploads > 0 && (
-        <Alert>
-          <Check className="h-4 w-4" />
-          <AlertDescription>
-            {successfulUploads} file(s) uploaded successfully! 
-            These will be automatically included in your test evaluation.
-            You can continue uploading more files or return to the main app.
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-3">
+          <Alert>
+            <Check className="h-4 w-4" />
+            <AlertDescription>
+              {successfulUploads} file(s) uploaded successfully! 
+              These will be automatically included in your test evaluation.
+            </AlertDescription>
+          </Alert>
+          <Button
+            className="w-full"
+            onClick={async () => {
+              try {
+                await supabase.functions.invoke('validate-upload-session', { body: { token, action: 'deactivate' } });
+              } catch (e) {
+                console.warn('Failed to deactivate session (will still navigate):', e);
+              }
+              try { window.close(); } catch (_) {}
+              navigate('/');
+            }}
+          >
+            Close & Return
+          </Button>
+        </div>
       )}
 
       {/* Instructions */}

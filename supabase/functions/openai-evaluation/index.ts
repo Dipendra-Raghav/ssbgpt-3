@@ -110,76 +110,85 @@ serve(async (req) => {
 
     console.log('Processing OpenAI evaluation for user:', userId, 'test:', testType);
 
-    // Validate required parameters
-    if (!userId || !testType || !responseIds || !Array.isArray(responseIds) || responseIds.length === 0) {
+    // Validate required parameters (allow image-only flow if finalImageUrl is provided)
+    const hasResponseIds = Array.isArray(responseIds) && responseIds.length > 0;
+    if (!userId || !testType || (!hasResponseIds && !finalImageUrl)) {
       console.error('Missing required parameters:', { userId, testType, responseIds });
-      throw new Error('Missing required parameters: userId, testType, and responseIds array are required');
+      throw new Error('Missing required parameters: provide responseIds or finalImageUrl');
     }
 
     console.log('Validated parameters:', { userId, testType, responseIds: responseIds.length, finalImageUrl: !!finalImageUrl });
 
-    // Fetch test responses with their associated words/situations
-    const { data: responses, error: responsesError } = await supabase
-      .from('test_responses')
-      .select('*')
-      .in('id', responseIds)
-      .eq('user_id', userId)
-      .eq('test_type', testType);
-
-    if (responsesError) {
-      console.error('Error fetching test responses:', responsesError);
-      throw new Error(`Database error: ${responsesError.message}`);
-    }
-
-    if (!responses || responses.length === 0) {
-      throw new Error('No test responses found for the specified criteria');
-    }
-
-    // Fetch associated test content separately to avoid relationship issues
+    // Fetch test responses with their associated words/situations (optional)
+    const hasResponseIds = Array.isArray(responseIds) && responseIds.length > 0;
+    let responses: any[] = [];
     let testContent: { [key: string]: any } = {};
     
-    if (testType === 'wat') {
-      const imageIds = responses.map(r => r.image_id).filter(id => id);
-      if (imageIds.length > 0) {
-        const { data: words, error: wordsError } = await supabase
-          .from('wat_words')
-          .select('id, word')
-          .in('id', imageIds);
-        
-        if (!wordsError && words) {
-          words.forEach(word => {
-            testContent[word.id] = { word: word.word };
-          });
+    if (hasResponseIds) {
+      const { data: respData, error: responsesError } = await supabase
+        .from('test_responses')
+        .select('*')
+        .in('id', responseIds)
+        .eq('user_id', userId)
+        .eq('test_type', testType);
+
+      if (responsesError) {
+        console.error('Error fetching test responses:', responsesError);
+        throw new Error(`Database error: ${responsesError.message}`);
+      }
+
+      if (!respData || respData.length === 0) {
+        console.warn('No test responses found for the specified criteria');
+      } else {
+        responses = respData;
+      }
+
+      // Fetch associated test content separately to avoid relationship issues
+      if (testType === 'wat') {
+        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+        if (imageIds.length > 0) {
+          const { data: words, error: wordsError } = await supabase
+            .from('wat_words')
+            .select('id, word')
+            .in('id', imageIds);
+          
+          if (!wordsError && words) {
+            words.forEach((word: any) => {
+              testContent[word.id] = { word: word.word };
+            });
+          }
+        }
+      } else if (testType === 'srt') {
+        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+        if (imageIds.length > 0) {
+          const { data: situations, error: situationsError } = await supabase
+            .from('srt_situations')
+            .select('id, situation_text')
+            .in('id', imageIds);
+          
+          if (!situationsError && situations) {
+            situations.forEach((situation: any) => {
+              testContent[situation.id] = { situation_text: situation.situation_text };
+            });
+          }
+        }
+      } else if (testType === 'ppdt') {
+        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+        if (imageIds.length > 0) {
+          const { data: images, error: imagesError } = await supabase
+            .from('ppdt_images')
+            .select('id, description')
+            .in('id', imageIds);
+          
+          if (!imagesError && images) {
+            images.forEach((image: any) => {
+              testContent[image.id] = { description: image.description };
+            });
+          }
         }
       }
-    } else if (testType === 'srt') {
-      const imageIds = responses.map(r => r.image_id).filter(id => id);
-      if (imageIds.length > 0) {
-        const { data: situations, error: situationsError } = await supabase
-          .from('srt_situations')
-          .select('id, situation_text')
-          .in('id', imageIds);
-        
-        if (!situationsError && situations) {
-          situations.forEach(situation => {
-            testContent[situation.id] = { situation_text: situation.situation_text };
-          });
-        }
-      }
-    } else if (testType === 'ppdt') {
-      const imageIds = responses.map(r => r.image_id).filter(id => id);
-      if (imageIds.length > 0) {
-        const { data: images, error: imagesError } = await supabase
-          .from('ppdt_images')
-          .select('id, description')
-          .in('id', imageIds);
-        
-        if (!imagesError && images) {
-          images.forEach(image => {
-            testContent[image.id] = { description: image.description };
-          });
-        }
-      }
+    } else {
+      console.log('Proceeding with image-only evaluation (no responseIds provided).');
     }
 
     // Prepare evaluation content based on test type

@@ -45,9 +45,9 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for real-time uploads from mobile
+  // Listen for real-time uploads from mobile and session status
   useEffect(() => {
-    const channel = supabase
+    const uploadsChannel = supabase
       .channel('session-uploads')
       .on(
         'postgres_changes',
@@ -59,7 +59,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
         },
         (payload) => {
           console.log('New mobile upload detected:', payload);
-          const upload = payload.new;
+          const upload = payload.new as any;
           
           // Create a File object from the upload data for compatibility
           const mockFile = new File([''], upload.file_path.split('/').pop() || 'mobile_upload.jpg', {
@@ -74,6 +74,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
           };
           
           setUploadedFiles(prev => [...prev, newFile]);
+          setShowQRDialog(false);
           
           toast({
             title: 'Mobile Upload Received',
@@ -83,8 +84,32 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
       )
       .subscribe();
 
+    const sessionChannel = supabase
+      .channel('upload-session-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'upload_sessions',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          const isActive = (payload.new as any)?.is_active;
+          if (isActive === false) {
+            setShowQRDialog(false);
+            toast({
+              title: 'Mobile Session Closed',
+              description: 'You can now proceed to evaluation.',
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(uploadsChannel);
+      supabase.removeChannel(sessionChannel);
     };
   }, [sessionId]);
 

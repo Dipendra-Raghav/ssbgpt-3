@@ -599,9 +599,23 @@ const SRT = () => {
                           
                           let finalImageUrl = null;
                           if (uploadedImage) {
-                            console.log('Uploading final image...');
-                            finalImageUrl = await uploadImage(uploadedImage);
-                            console.log('Final image uploaded:', finalImageUrl);
+                            if (uploadedImage.size === 0) {
+                              const { data: latest, error: suError } = await supabase
+                                .from('session_uploads')
+                                .select('public_url')
+                                .eq('session_id', sessionId)
+                                .order('created_at', { ascending: false })
+                                .limit(1)
+                                .single();
+                              if (!suError && latest?.public_url) {
+                                finalImageUrl = latest.public_url;
+                                console.log('Using mobile-uploaded image URL:', finalImageUrl);
+                              }
+                            } else {
+                              console.log('Uploading final image...');
+                              finalImageUrl = await uploadImage(uploadedImage);
+                              console.log('Final image uploaded:', finalImageUrl);
+                            }
                           }
 
                           const responseIds = responses.map(r => r.id);
