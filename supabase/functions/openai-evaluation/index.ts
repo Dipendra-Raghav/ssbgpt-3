@@ -117,10 +117,9 @@ serve(async (req) => {
       throw new Error('Missing required parameters: provide responseIds or finalImageUrl');
     }
 
-    console.log('Validated parameters:', { userId, testType, responseIds: responseIds.length, finalImageUrl: !!finalImageUrl });
+    console.log('Validated parameters:', { userId, testType, responseIds: Array.isArray(responseIds) ? responseIds.length : 0, finalImageUrl: !!finalImageUrl });
 
     // Fetch test responses with their associated words/situations (optional)
-    const hasResponseIds = Array.isArray(responseIds) && responseIds.length > 0;
     let responses: any[] = [];
     let testContent: { [key: string]: any } = {};
     
