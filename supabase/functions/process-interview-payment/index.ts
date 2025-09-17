@@ -58,6 +58,17 @@ serve(async (req) => {
         throw new Error("Slot is no longer available");
       }
 
+      // Get Razorpay credentials
+      const razorpayKeyId = Deno.env.get("RAZORPAY_KEY_ID");
+      const razorpaySecretKey = Deno.env.get("RAZORPAY_SECRET_KEY");
+      
+      console.log("Razorpay Key ID exists:", !!razorpayKeyId);
+      console.log("Razorpay Secret Key exists:", !!razorpaySecretKey);
+      
+      if (!razorpayKeyId || !razorpaySecretKey) {
+        throw new Error("Razorpay credentials not found in environment");
+      }
+
       // Create Razorpay order
       const orderData = {
         amount: amount * 100, // Convert to paise
@@ -70,14 +81,21 @@ serve(async (req) => {
         },
       };
 
+      console.log("Creating Razorpay order with data:", { ...orderData, notes: "hidden" });
+
+      const authString = btoa(`${razorpayKeyId}:${razorpaySecretKey}`);
+      console.log("Auth string length:", authString.length);
+
       const response = await fetch("https://api.razorpay.com/v1/orders", {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${btoa(`${Deno.env.get("RAZORPAY_KEY_ID")}:${Deno.env.get("RAZORPAY_SECRET_KEY")}`)}`,
+          "Authorization": `Basic ${authString}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(orderData),
       });
+
+      console.log("Razorpay API response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
