@@ -291,8 +291,14 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
                 size="lg"
               >
                 <div className="flex flex-col items-center gap-1">
-                  <QrCode className="w-6 h-6" />
-                  <span className="text-sm">Scan QR to Upload from Phone</span>
+                  {isUploading ? (
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <QrCode className="w-6 h-6" />
+                  )}
+                  <span className="text-sm">
+                    {isUploading ? 'Generating QR...' : 'Scan QR to Upload from Phone'}
+                  </span>
                 </div>
               </Button>
               <Button
@@ -400,33 +406,21 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
             
             <div className="space-y-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border">
-                <h3 className="font-semibold text-lg mb-2">Have you uploaded all your answer photos?</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Double-check that all your written responses are uploaded before proceeding to evaluation.
-                </p>
                 <div className="text-sm text-muted-foreground">
                   <p>📱 Mobile uploads: {successfulUploads} files</p>
                   {currentUploadedImage && <p>💻 Current image: {currentUploadedImage.name}</p>}
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex justify-center">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setUploadedFiles([]);
                     onImageChange?.(null);
                   }}
-                  className="flex-1"
                 >
                   Reset & Upload More
-                </Button>
-                <Button
-                  onClick={handleConfirm}
-                  disabled={!allFilesUploaded && !currentUploadedImage}
-                  className="flex-1"
-                >
-                  Yes, Proceed to Evaluation
                 </Button>
               </div>
             </div>

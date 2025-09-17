@@ -298,7 +298,7 @@ const WAT = () => {
   }, [testInProgress]);
 
   const handleNextWord = async () => {
-    if (!user || !words[currentIndex] || !sentence.trim()) return;
+    if (!user || !words[currentIndex]) return;
 
     try {
       // Save current response
@@ -486,15 +486,6 @@ const WAT = () => {
                       {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={skipCurrentWord}
-                    disabled={!isActive || isPaused}
-                  >
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Next
-                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -565,14 +556,14 @@ const WAT = () => {
                   <p className="text-sm text-muted-foreground">
                     Words: {sentence.split(' ').filter(word => word.length > 0).length}
                   </p>
-                  <Button 
-                    onClick={handleNextWord}
-                    disabled={!sentence.trim()}
-                    className="shadow-command"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Next Word
-                  </Button>
+                    <Button 
+                      onClick={handleNextWord}
+                      disabled={loading}
+                      className="shadow-command"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Next Word
+                    </Button>
                 </div>
               </CardContent>
             </Card>
@@ -668,14 +659,23 @@ const WAT = () => {
             throw error;
           }
                           
-                         toast({
-                           title: "Evaluation Complete!",
-                           description: "Your WAT test has been evaluated successfully.",
-                         });
-                         
-                         setTimeout(() => {
-                           window.location.href = '/results';
-                         }, 1500);
+                          // Clean up uploaded images
+                          try {
+                            await supabase.functions.invoke('delete-test-images', {
+                              body: { sessionId, testType: 'wat' }
+                            });
+                          } catch (cleanupError) {
+                            console.warn('Failed to cleanup images:', cleanupError);
+                          }
+
+                          toast({
+                            title: "Evaluation Complete!",
+                            description: "Your WAT test has been evaluated successfully.",
+                          });
+                          
+                          setTimeout(() => {
+                            window.location.href = '/results';
+                          }, 1500);
                        } catch (error: any) {
                          console.error('Evaluation error:', error);
                          setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');

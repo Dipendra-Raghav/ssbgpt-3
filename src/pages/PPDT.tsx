@@ -66,10 +66,18 @@ const PPDT = () => {
     responses: [],
     practiceCount: 1,
     sessionId: crypto.randomUUID(),
-    story: ''
+    story: '',
+    writingTimeLeft: 240
   });
 
   const { hasStarted, currentIndex: currentImageIndex, completedCount, responses, practiceCount, sessionId, story } = testState;
+  
+  // Initialize writingTimeLeft from persistence if available
+  useEffect(() => {
+    if (testState.writingTimeLeft !== undefined) {
+      setWritingTimeLeft(testState.writingTimeLeft);
+    }
+  }, [testState.writingTimeLeft]);
 
   // Restore UI state if test was already started
   useEffect(() => {
@@ -188,23 +196,25 @@ const PPDT = () => {
     }
   }, [isViewingPhase, viewingTimeLeft]);
 
-  // Writing timer logic
+  // Writing timer logic - persist time when paused
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
     if (isWritingPhase && writingTimeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
-        setWritingTimeLeft(time => time - 1);
+        setWritingTimeLeft(time => {
+          const newTime = time - 1;
+          // Save remaining time to persistence
+          updateTestState({ writingTimeLeft: newTime });
+          return newTime;
+        });
       }, 1000);
-    } else if (isWritingPhase && writingTimeLeft === 0) {
-      setIsWritingPhase(false);
-      setIsComplete(true);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isWritingPhase, writingTimeLeft, isPaused]);
+  }, [isWritingPhase, writingTimeLeft, isPaused, updateTestState]);
 
   const [starting, setStarting] = useState(false);
 
@@ -516,15 +526,6 @@ const PPDT = () => {
                       {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={skipCurrentImage}
-                    disabled={!isViewingPhase && !isWritingPhase}
-                  >
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Skip
-                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -638,11 +639,21 @@ const PPDT = () => {
                   disabled={writingTimeLeft === 0}
                 />
 
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    Characters: {story.length} | Words: {story.split(' ').filter(word => word.length > 0).length}
-                  </p>
-                </div>
+                 <div className="flex justify-between items-center">
+                   <p className="text-sm text-muted-foreground">
+                     Characters: {story.length} | Words: {story.split(' ').filter(word => word.length > 0).length}
+                   </p>
+                   <Button 
+                     onClick={() => {
+                       setIsWritingPhase(false);
+                       setIsComplete(true);
+                     }}
+                     className="shadow-command"
+                   >
+                     <Send className="w-4 h-4 mr-2" />
+                     Next
+                   </Button>
+                 </div>
               </CardContent>
             </Card>
           )}
@@ -651,9 +662,9 @@ const PPDT = () => {
           {isComplete && completedCount < practiceCount && (
             <Card>
               <CardHeader>
-                <CardTitle>Time's Up!</CardTitle>
+                <CardTitle>Ready for Next Image</CardTitle>
                 <CardDescription>
-                  Your response has been automatically saved. Moving to next image...
+                  Your response has been saved. Continue to the next image.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -758,16 +769,25 @@ const PPDT = () => {
                             throw error;
                           }
                          
-                         // Show success message before redirecting
-                         toast({
-                           title: "Evaluation Complete!",
-                           description: "Your PPDT test has been evaluated successfully.",
-                         });
-                         
-                         // Auto-redirect to results page after a short delay
-                         setTimeout(() => {
-                           window.location.href = '/results';
-                         }, 1500);
+                          // Clean up uploaded images
+                          try {
+                            await supabase.functions.invoke('delete-test-images', {
+                              body: { sessionId, testType: 'ppdt' }
+                            });
+                          } catch (cleanupError) {
+                            console.warn('Failed to cleanup images:', cleanupError);
+                          }
+
+                          // Show success message before redirecting
+                          toast({
+                            title: "Evaluation Complete!",
+                            description: "Your PPDT test has been evaluated successfully.",
+                          });
+                          
+                          // Auto-redirect to results page after a short delay
+                          setTimeout(() => {
+                            window.location.href = '/results';
+                          }, 1500);
                        } catch (error: any) {
                          console.error('Evaluation error:', error);
                          setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');

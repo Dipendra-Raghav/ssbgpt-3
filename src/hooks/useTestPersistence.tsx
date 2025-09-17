@@ -12,6 +12,7 @@ interface TestState {
   response?: string;
   story?: string;
   uploadedImage?: File | null;
+  writingTimeLeft?: number;
 }
 
 export const useTestPersistence = (testType: string, defaultState: TestState) => {

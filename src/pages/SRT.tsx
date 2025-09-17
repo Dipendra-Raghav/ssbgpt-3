@@ -150,6 +150,19 @@ const SRT = () => {
 
   const [starting, setStarting] = useState(false);
 
+  // Fullscreen exit handler - pause test
+  useEffect(() => {
+    if (testInProgress && !isFullscreen && isSupported) {
+      setIsPaused(true);
+      setIsActive(false);
+      toast({
+        title: 'Test Paused',
+        description: 'Test paused due to exiting fullscreen mode.',
+        variant: 'default',
+      });
+    }
+  }, [isFullscreen, testInProgress, isSupported]);
+
   const checkCreditsAndStart = async () => {
     if (hasActivePlan()) {
       startTest();
@@ -275,7 +288,7 @@ const SRT = () => {
   const handleNextSituation = async () => {
     if (!user || !situations[currentIndex]) return;
 
-      setLoading(true);
+    setLoading(true);
       try {
         // Save current response (no image upload per question anymore)
         const { data: savedResponse, error } = await supabase
@@ -444,15 +457,6 @@ const SRT = () => {
                       {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={skipCurrentSituation}
-                    disabled={!isActive || completedCount >= practiceCount}
-                  >
-                    <SkipForward className="w-4 h-4 mr-2" />
-                    Skip
-                  </Button>
                    <AlertDialog>
                      <AlertDialogTrigger asChild>
                        <Button
@@ -533,15 +537,15 @@ const SRT = () => {
                      <p className="text-sm text-muted-foreground">
                        Characters: {response.length} | Words: {response.split(' ').filter(word => word.length > 0).length}
                      </p>
-                     <Button 
-                       onClick={handleNextSituation}
-                       disabled={!response.trim() || loading}
-                       className="shadow-command"
-                     >
-                       <Send className="w-4 h-4 mr-2" />
-                       {loading ? 'Submitting...' : 
-                        currentIndex < situations.length - 1 ? 'Next Situation' : 'Finish'}
-                     </Button>
+                      <Button 
+                        onClick={handleNextSituation}
+                        disabled={loading}
+                        className="shadow-command"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        {loading ? 'Submitting...' : 
+                         currentIndex < situations.length - 1 ? 'Next Situation' : 'Finish'}
+                      </Button>
                    </div>
                    </div>
               </CardContent>
@@ -637,14 +641,23 @@ const SRT = () => {
                             throw error;
                           }
                           
-                          toast({
-                            title: "Evaluation Complete!",
-                            description: "Your SRT test has been evaluated successfully.",
-                          });
-                          
-                          setTimeout(() => {
-                            window.location.href = '/results';
-                          }, 1500);
+                           // Clean up uploaded images
+                           try {
+                             await supabase.functions.invoke('delete-test-images', {
+                               body: { sessionId, testType: 'srt' }
+                             });
+                           } catch (cleanupError) {
+                             console.warn('Failed to cleanup images:', cleanupError);
+                           }
+
+                           toast({
+                             title: "Evaluation Complete!",
+                             description: "Your SRT test has been evaluated successfully.",
+                           });
+                           
+                           setTimeout(() => {
+                             window.location.href = '/results';
+                           }, 1500);
                         } catch (error: any) {
                           console.error('Evaluation error:', error);
                           setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
