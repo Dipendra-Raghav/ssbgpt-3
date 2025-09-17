@@ -144,18 +144,18 @@ serve(async (req) => {
       // Generate Google Meet link (for demo purposes, using a template)
       const meetLink = `https://meet.google.com/interview-${Date.now()}`;
 
-      // Create interview request with confirmed status
-      const { data: interviewRequest, error: requestError } = await supabaseService
-        .from("interview_requests")
-        .insert({
-          user_id: user.id,
-          interviewer_id: interviewer_id,
-          slot_id: slot_id,
-          status: "confirmed",
-          payment_status: "paid",
-          stripe_payment_intent_id: razorpay_payment_id,
-          google_meet_link: meetLink,
-        })
+        // Create interview request with approved status
+        const { data: interviewRequest, error: requestError } = await supabaseService
+          .from("interview_requests")
+          .insert({
+            user_id: user.id,
+            interviewer_id: interviewer_id,
+            slot_id: slot_id,
+            status: "approved",
+            payment_status: "paid",
+            stripe_payment_intent_id: razorpay_payment_id,
+            google_meet_link: meetLink,
+          })
         .select()
         .single();
 
