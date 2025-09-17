@@ -69,11 +69,13 @@ serve(async (req) => {
         throw new Error("Razorpay credentials not found in environment");
       }
 
-      // Create Razorpay order
+      // Create Razorpay order (receipt max 40 chars)
+      const timestamp = Date.now().toString();
+      const shortUserId = user.id.substring(0, 8); // First 8 chars of UUID
       const orderData = {
         amount: amount * 100, // Convert to paise
         currency: "INR",
-        receipt: `interview_${user.id}_${Date.now()}`,
+        receipt: `int_${shortUserId}_${timestamp}`, // Keeps under 40 chars
         notes: {
           user_id: user.id,
           interviewer_id: interviewerId,
