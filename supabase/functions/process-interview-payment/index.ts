@@ -80,7 +80,9 @@ serve(async (req) => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create Razorpay order");
+        const errorText = await response.text();
+        console.error("Razorpay API Error:", response.status, errorText);
+        throw new Error(`Failed to create Razorpay order: ${response.status} - ${errorText}`);
       }
 
       const order = await response.json();
