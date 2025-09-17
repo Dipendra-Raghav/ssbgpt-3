@@ -727,28 +727,30 @@ const PPDT = () => {
                          setEvaluationLoading(true);
                          setEvaluationError(null);
                          
-                          console.log('Processing evaluation for:', { userId: user?.id, testType: 'ppdt', responseCount: responses.length });
-                          
-                          let finalImageUrl = null;
-                          if (uploadedImage) {
-                            if (uploadedImage.size === 0) {
-                              const { data: latest, error: suError } = await supabase
-                                .from('session_uploads')
-                                .select('public_url')
-                                .eq('session_id', sessionId)
-                                .order('created_at', { ascending: false })
-                                .limit(1)
-                                .single();
-                              if (!suError && latest?.public_url) {
-                                finalImageUrl = latest.public_url;
-                                console.log('Using mobile-uploaded image URL:', finalImageUrl);
-                              }
-                            } else {
-                              console.log('Uploading final image...');
-                              finalImageUrl = await uploadImage(uploadedImage);
-                              console.log('Final image uploaded:', finalImageUrl);
-                            }
-                          }
+                           console.log('Processing evaluation for:', { userId: user?.id, testType: 'ppdt', responseCount: responses.length });
+                           
+                           let finalImageUrl = null;
+                           
+                           // Always check for any images first - prioritize session uploads for mobile
+                           console.log('Image check:', { hasUploadedImage: !!uploadedImage, uploadedImageSize: uploadedImage?.size });
+                           
+                           // First check for mobile uploads regardless of uploadedImage state
+                           const { data: mobileUploads, error: uploadError } = await supabase
+                             .from('session_uploads')
+                             .select('public_url')
+                             .eq('session_id', sessionId)
+                             .order('created_at', { ascending: false })
+                             .limit(1);
+                             
+                           if (!uploadError && mobileUploads && mobileUploads.length > 0) {
+                             finalImageUrl = mobileUploads[0].public_url;
+                             console.log('Using mobile-uploaded image URL:', finalImageUrl);
+                           } else if (uploadedImage && uploadedImage.size > 0) {
+                             // Only upload computer-selected file if no mobile uploads found
+                             console.log('Uploading computer-selected image...');
+                             finalImageUrl = await uploadImage(uploadedImage);
+                             console.log('Computer image uploaded:', finalImageUrl);
+                           }
 
                           const responseIds = responses.map(r => r.id);
                           console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'ppdt', responseIds, finalImageUrl });

@@ -40,6 +40,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
   const { uploadMultipleFiles, isUploading, uploadProgress } = useUploadManager(sessionId);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +76,10 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
           
           setUploadedFiles(prev => [...prev, newFile]);
           setShowQRDialog(false);
+          
+          // CRITICAL: Notify parent components about the mobile upload
+          onImageChange?.(mockFile);
+          onFilesUploaded?.([mockFile]);
           
           toast({
             title: 'Mobile Upload Received',
@@ -116,6 +121,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
   // Generate QR code for mobile upload
   const generateQRCode = async () => {
     try {
+      setIsGeneratingQR(true);
       console.log('Creating upload session for:', { sessionId, testType });
       
       // Create upload session via edge function
@@ -154,6 +160,8 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
         description: `Failed to generate QR code: ${error.message}`,
         variant: 'destructive',
       });
+    } finally {
+      setIsGeneratingQR(false);
     }
   };
 
@@ -286,18 +294,18 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <Button
                 onClick={generateQRCode}
-                disabled={isUploading}
+                disabled={isUploading || isGeneratingQR}
                 className="h-16"
                 size="lg"
               >
                 <div className="flex flex-col items-center gap-1">
-                  {isUploading ? (
+                  {isUploading || isGeneratingQR ? (
                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <QrCode className="w-6 h-6" />
                   )}
                   <span className="text-sm">
-                    {isUploading ? 'Generating QR...' : 'Scan QR to Upload from Phone'}
+                    {isUploading ? 'Uploading...' : isGeneratingQR ? 'Generating QR...' : 'Scan QR to Upload from Phone'}
                   </span>
                 </div>
               </Button>
