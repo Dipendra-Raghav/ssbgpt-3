@@ -106,18 +106,21 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { userId, testType, responseIds, finalImageUrl } = await req.json();
+    const { userId, testType, responseIds, finalImageUrl, finalImageUrls } = await req.json();
 
     console.log('Processing OpenAI evaluation for user:', userId, 'test:', testType);
 
-    // Validate required parameters (allow image-only flow if finalImageUrl is provided)
+    // Validate required parameters (allow image-only flow if images are provided)
     const hasResponseIds = Array.isArray(responseIds) && responseIds.length > 0;
-    if (!userId || !testType || (!hasResponseIds && !finalImageUrl)) {
+    const imageUrls = finalImageUrls || (finalImageUrl ? [finalImageUrl] : []);
+    const hasImages = imageUrls.length > 0;
+    
+    if (!userId || !testType || (!hasResponseIds && !hasImages)) {
       console.error('Missing required parameters:', { userId, testType, responseIds });
-      throw new Error('Missing required parameters: provide responseIds or finalImageUrl');
+      throw new Error('Missing required parameters: provide responseIds or finalImageUrl/finalImageUrls');
     }
 
-    console.log('Validated parameters:', { userId, testType, responseIds: Array.isArray(responseIds) ? responseIds.length : 0, finalImageUrl: !!finalImageUrl });
+    console.log('Validated parameters:', { userId, testType, responseIds: Array.isArray(responseIds) ? responseIds.length : 0, imageUrls: imageUrls.length });
 
     // Fetch test responses with their associated words/situations (optional)
     let responses: any[] = [];
@@ -223,20 +226,15 @@ Provide evaluation focusing on psychological insights, word associations, senten
       throw new Error(`Unsupported test type: ${testType}. Supported types are: ppdt, srt, wat`);
     }
 
-    // Check if any responses have images or if there's a final uploaded image
-    const hasImages = responses.some(r => r.response_image_url) || finalImageUrl;
+    // Check if any responses have images or if there are uploaded images
+    const responseImages = responses.filter(r => r.response_image_url).length > 0;
+    const hasAnyImages = responseImages || hasImages;
     
-    if (hasImages) {
-      // Enhanced prompt for image processing
+    if (hasAnyImages) {
+      // Add note about images for processing
       userContent += `
 
-IMPORTANT: The user has uploaded images that may contain handwritten responses. Please:
-1. First, carefully read and transcribe any handwritten text visible in the uploaded images
-2. Use both the typed responses AND the handwritten text from images for evaluation
-3. If you see handwritten responses that differ from typed responses, prioritize the handwritten content
-4. Mention in your evaluation if you found additional content in the images
-
-Images may contain: handwritten answers, sketches, diagrams, or additional notes that supplement the typed responses.`;
+Note: Images have been uploaded that may contain handwritten responses. Please analyze both typed responses and any handwritten content in the images for evaluation.`;
       
       // Include images in the message
       const content = [
@@ -255,15 +253,15 @@ Images may contain: handwritten answers, sketches, diagrams, or additional notes
         }
       });
       
-      // Add the final uploaded image if it exists
-      if (finalImageUrl) {
+      // Add all uploaded images
+      imageUrls.forEach(url => {
         content.push({
           type: 'image_url',
           image_url: {
-            url: finalImageUrl
+            url: url
           }
         });
-      }
+      });
       
       messages.push({
         role: 'user',
@@ -296,7 +294,8 @@ Images may contain: handwritten answers, sketches, diagrams, or additional notes
             model: 'gpt-4o-mini',
             messages: messages,
             max_tokens: 2000,
-            temperature: 0.7
+            temperature: 0.7,
+            response_format: { type: 'json_object' }
           })
         });
 
@@ -337,13 +336,35 @@ Images may contain: handwritten answers, sketches, diagrams, or additional notes
 
     console.log('OpenAI response:', evaluationText);
 
-    // Parse the JSON response
+    // Parse the JSON response with robust error handling
     let evaluation;
     try {
+      // Try parsing as-is first
       evaluation = JSON.parse(evaluationText);
     } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      throw new Error('Invalid JSON response from OpenAI');
+      console.error('Initial JSON parse failed, attempting cleanup:', parseError);
+      
+      try {
+        // Strip markdown code fences if present
+        let cleanText = evaluationText.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+        evaluation = JSON.parse(cleanText);
+      } catch (secondParseError) {
+        console.error('Cleaned JSON parse failed, trying regex extraction:', secondParseError);
+        
+        try {
+          // Last resort: extract JSON from text using regex
+          const jsonMatch = evaluationText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            evaluation = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON found in response');
+          }
+        } catch (finalParseError) {
+          console.error('All JSON parsing attempts failed:', finalParseError);
+          console.log('Raw OpenAI response that failed to parse:', evaluationText);
+          throw new Error('Unable to parse evaluation response from OpenAI');
+        }
+      }
     }
 
     // Validate required fields

@@ -296,7 +296,7 @@ const SRT = () => {
           .insert({
             user_id: user.id,
             test_type: 'srt',
-            response_text: response,
+            response_text: response.trim() || null,
             image_id: situations[currentIndex].id,
             session_id: sessionId,
             time_taken: Math.max(0, (practiceCount * 15) - totalTimeLeft)
@@ -617,33 +617,65 @@ const SRT = () => {
            // Always check for any images first - prioritize session uploads for mobile
            console.log('Image check:', { hasUploadedImage: !!uploadedImage, uploadedImageSize: uploadedImage?.size });
            
-           // First check for mobile uploads regardless of uploadedImage state
-           const { data: mobileUploads, error: uploadError } = await supabase
-             .from('session_uploads')
-             .select('public_url')
-             .eq('session_id', sessionId)
-             .order('created_at', { ascending: false })
-             .limit(1);
-             
-           if (!uploadError && mobileUploads && mobileUploads.length > 0) {
-             finalImageUrl = mobileUploads[0].public_url;
-             console.log('Using mobile-uploaded image URL:', finalImageUrl);
-           } else if (uploadedImage && uploadedImage.size > 0) {
-             // Only upload computer-selected file if no mobile uploads found
-             console.log('Uploading computer-selected image...');
-             finalImageUrl = await uploadImage(uploadedImage);
-             console.log('Computer image uploaded:', finalImageUrl);
-           }
+            // First check for all mobile uploads
+            const { data: mobileUploads, error: uploadError } = await supabase
+              .from('session_uploads')
+              .select('public_url')
+              .eq('session_id', sessionId)
+              .order('created_at', { ascending: false });
+              
+            let finalImageUrls: string[] = [];
+            
+            if (!uploadError && mobileUploads && mobileUploads.length > 0) {
+              finalImageUrls = mobileUploads.map(upload => upload.public_url);
+              console.log('Using mobile-uploaded image URLs:', finalImageUrls);
+            } else {
+              // Short re-check in case uploads are still processing
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              const { data: recheckUploads } = await supabase
+                .from('session_uploads')
+                .select('public_url')
+                .eq('session_id', sessionId)
+                .order('created_at', { ascending: false });
+                
+              if (recheckUploads && recheckUploads.length > 0) {
+                finalImageUrls = recheckUploads.map(upload => upload.public_url);
+                console.log('Found images on re-check:', finalImageUrls);
+              }
+            }
+            
+            // If no mobile uploads, check for computer upload
+            if (finalImageUrls.length === 0 && uploadedImage && uploadedImage.size > 0) {
+              console.log('Uploading computer-selected image...');
+              const uploadedUrl = await uploadImage(uploadedImage);
+              if (uploadedUrl) {
+                finalImageUrls = [uploadedUrl];
+                console.log('Computer image uploaded:', finalImageUrls);
+              }
+            }
+
+                          // Check if we have any content to evaluate
+                          const hasTextResponses = responses.some(r => r.response_text && r.response_text.trim());
+                          const hasImages = finalImageUrls.length > 0;
+                          
+                          if (!hasTextResponses && !hasImages) {
+                            toast({
+                              title: "No Content",
+                              description: "Please provide either text responses or upload an image before evaluation.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
 
                           const responseIds = responses.map(r => r.id);
-                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'srt', responseIds, finalImageUrl });
+                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'srt', responseIds, finalImageUrls });
                           
                           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
                             body: {
                               userId: user?.id,
                               testType: 'srt',
                               responseIds,
-                              finalImageUrl
+                              finalImageUrls
                             }
                           });
                           
