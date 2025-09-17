@@ -496,7 +496,18 @@ const SRT = () => {
                   {situations.length === 0 ? 'Preparing your first situation...' : 'Timer paused.'}
                 </p>
                 {!isActive && (
-                  <Button variant="outline" onClick={() => { setIsActive(true); }}>
+                  <Button variant="outline" onClick={async () => {
+                    setIsPaused(false);
+                    setIsActive(true);
+                    // Re-enter fullscreen if supported
+                    if (isSupported && !isFullscreen) {
+                      await enterFullscreen();
+                    }
+                    toast({
+                      title: 'Test Resumed',
+                      description: 'Your test has been resumed in fullscreen mode.',
+                    });
+                  }}>
                     Resume
                   </Button>
                 )}

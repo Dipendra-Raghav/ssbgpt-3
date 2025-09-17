@@ -227,6 +227,17 @@ Provide evaluation focusing on psychological insights, word associations, senten
     const hasImages = responses.some(r => r.response_image_url) || finalImageUrl;
     
     if (hasImages) {
+      // Enhanced prompt for image processing
+      userContent += `
+
+IMPORTANT: The user has uploaded images that may contain handwritten responses. Please:
+1. First, carefully read and transcribe any handwritten text visible in the uploaded images
+2. Use both the typed responses AND the handwritten text from images for evaluation
+3. If you see handwritten responses that differ from typed responses, prioritize the handwritten content
+4. Mention in your evaluation if you found additional content in the images
+
+Images may contain: handwritten answers, sketches, diagrams, or additional notes that supplement the typed responses.`;
+      
       // Include images in the message
       const content = [
         { type: 'text', text: userContent }

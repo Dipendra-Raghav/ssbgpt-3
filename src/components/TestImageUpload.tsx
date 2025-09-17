@@ -404,13 +404,7 @@ export const TestImageUpload: React.FC<TestImageUploadProps> = ({
               </Alert>
             )}
             
-            <div className="space-y-4">
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border">
-                <div className="text-sm text-muted-foreground">
-                  <p>📱 Mobile uploads: {successfulUploads} files</p>
-                  {currentUploadedImage && <p>💻 Current image: {currentUploadedImage.name}</p>}
-                </div>
-              </div>
+            <div className="space-y-4">{/* Mobile upload info removed as requested */}
               
               <div className="flex justify-center">
                 <Button

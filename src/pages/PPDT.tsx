@@ -639,21 +639,21 @@ const PPDT = () => {
                   disabled={writingTimeLeft === 0}
                 />
 
-                 <div className="flex justify-between items-center">
-                   <p className="text-sm text-muted-foreground">
-                     Characters: {story.length} | Words: {story.split(' ').filter(word => word.length > 0).length}
-                   </p>
-                   <Button 
-                     onClick={() => {
-                       setIsWritingPhase(false);
-                       setIsComplete(true);
-                     }}
-                     className="shadow-command"
-                   >
-                     <Send className="w-4 h-4 mr-2" />
-                     Next
-                   </Button>
-                 </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">
+                      Characters: {story.length} | Words: {story.split(' ').filter(word => word.length > 0).length}
+                    </p>
+                    <Button 
+                      onClick={() => {
+                        setIsWritingPhase(false);
+                        setIsComplete(true);
+                      }}
+                      className="shadow-command"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Next
+                    </Button>
+                  </div>
               </CardContent>
             </Card>
           )}
