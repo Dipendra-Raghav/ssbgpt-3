@@ -3,11 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import { 
   Star, 
   MapPin, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   Clock, 
   User,
   CheckCircle,
@@ -18,6 +21,12 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { supabaseClient as supabase } from '@/lib/supabase-client';
 import { toast } from '@/hooks/use-toast';
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
 
 interface Interviewer {
   id: string;
@@ -52,10 +61,11 @@ interface InterviewRequest {
 }
 
 const Interview = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [selectedInterviewer, setSelectedInterviewer] = useState<Interviewer | null>(null);
   const [availableSlots, setAvailableSlots] = useState<InterviewSlot[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [myRequests, setMyRequests] = useState<InterviewRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,39 +141,138 @@ const Interview = () => {
   const handleInterviewerSelect = (interviewer: Interviewer) => {
     setSelectedInterviewer(interviewer);
     fetchSlots(interviewer.id);
+    setSelectedDate(undefined);
     setSelectedSlot('');
   };
 
-  const handleRequestInterview = async () => {
-    if (!selectedInterviewer || !selectedSlot) return;
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Get available time slots for selected date
+  const getTimeSlotsForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return availableSlots.filter(slot => slot.slot_date === dateStr);
+  };
+
+  const handleBookInterview = async () => {
+    if (!selectedInterviewer || !selectedSlot || !user || !session) return;
 
     try {
       setSubmitting(true);
+      
+      // Load Razorpay if not already loaded
+      await loadRazorpay();
 
-      const { error } = await supabase
-        .from('interview_requests')
-        .insert({
-          user_id: user?.id,
-          interviewer_id: selectedInterviewer.id,
-          slot_id: selectedSlot,
-          status: 'pending',
-          payment_status: 'pending'
+      if (!window.Razorpay) {
+        toast({
+          title: 'Error',
+          description: 'Razorpay SDK failed to load. Please check your internet connection.',
+          variant: 'destructive',
         });
+        return;
+      }
 
-      if (error) throw error;
-
-      toast({
-        title: 'Request Submitted',
-        description: 'Your interview request has been submitted. You will be notified once approved.',
+      // Create order by calling the edge function with action parameter
+      const createOrderUrl = new URL('/functions/v1/process-interview-payment', 'https://xwwzrahhimaaskjvsybk.supabase.co');
+      createOrderUrl.searchParams.set('action', 'create-order');
+      
+      const orderResponse = await fetch(createOrderUrl.toString(), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          interviewerId: selectedInterviewer.id,
+          slotId: selectedSlot,
+          amount: 399
+        })
       });
 
-      setSelectedInterviewer(null);
-      setSelectedSlot('');
-      fetchMyRequests();
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(errorData.error || 'Failed to create order');
+      }
+
+      const orderData = await orderResponse.json();
+
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'SSB GPT - Interview Booking',
+        description: `Interview with ${selectedInterviewer.name}`,
+        image: '/favicon.ico',
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          try {
+            // Verify payment and create interview request
+            const verifyPaymentUrl = new URL('/functions/v1/process-interview-payment', 'https://xwwzrahhimaaskjvsybk.supabase.co');
+            verifyPaymentUrl.searchParams.set('action', 'verify-payment');
+            
+            const verifyResponse = await fetch(verifyPaymentUrl.toString(), {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                interviewer_id: selectedInterviewer.id,
+                slot_id: selectedSlot,
+              })
+            });
+
+            if (!verifyResponse.ok) {
+              const errorData = await verifyResponse.json();
+              throw new Error(errorData.error || 'Payment verification failed');
+            }
+
+            const verifyData = await verifyResponse.json();
+
+            toast({
+              title: 'Interview Booked Successfully! 🎉',
+              description: 'Your interview has been confirmed. Check your interview details below.',
+            });
+
+            setSelectedInterviewer(null);
+            setSelectedDate(undefined);
+            setSelectedSlot('');
+            fetchMyRequests();
+          } catch (error: any) {
+            toast({
+              title: 'Error',
+              description: `Payment verification failed: ${error.message}`,
+              variant: 'destructive',
+            });
+          }
+        },
+        prefill: {
+          name: user.user_metadata?.full_name || '',
+          email: user.email || '',
+        },
+        notes: { 
+          interviewer_id: selectedInterviewer.id,
+          slot_id: selectedSlot,
+        },
+        theme: { color: '#2563eb' },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to submit interview request.',
+        description: error.message || 'Failed to initiate payment.',
         variant: 'destructive',
       });
     } finally {
@@ -171,13 +280,6 @@ const Interview = () => {
     }
   };
 
-  const handlePayment = async (requestId: string) => {
-    // In a real app, this would integrate with Stripe for payment
-    toast({
-      title: 'Payment Integration',
-      description: 'Payment integration will be implemented with Stripe API.',
-    });
-  };
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -201,7 +303,7 @@ const Interview = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'approved': return 'default';
+      case 'confirmed': return 'default';
       case 'pending': return 'secondary';
       case 'rejected': return 'destructive';
       case 'completed': return 'outline';
@@ -230,7 +332,7 @@ const Interview = () => {
         <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-6">
           <p className="text-sm font-medium flex items-center gap-2">
             <IndianRupee className="w-4 h-4" />
-            You have to pay ₹299 to give an interview with 3x recommended candidates.
+            Instant booking: Pay ₹399 to book an interview with 3x recommended candidates.
           </p>
         </div>
       </div>
@@ -259,13 +361,7 @@ const Interview = () => {
                       <Badge variant={getStatusBadgeVariant(request.status)}>
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </Badge>
-                      {request.status === 'approved' && request.payment_status === 'pending' && (
-                        <Button size="sm" onClick={() => handlePayment(request.id)}>
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Pay ₹299
-                        </Button>
-                      )}
-                      {request.status === 'approved' && request.payment_status === 'paid' && request.google_meet_link && (
+                      {request.status === 'confirmed' && request.google_meet_link && (
                         <Button size="sm" variant="outline" asChild>
                           <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer">
                             <Video className="w-4 h-4 mr-2" />
@@ -349,39 +445,73 @@ const Interview = () => {
                           </div>
                           
                           <div>
-                            <h4 className="font-semibold mb-2">Available Slots</h4>
-                            <Select value={selectedSlot} onValueChange={setSelectedSlot}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an available time slot" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableSlots.map((slot) => (
-                                  <SelectItem key={slot.id} value={slot.id}>
-                                    {formatDate(slot.slot_date)} at {formatTime(slot.slot_time)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <h4 className="font-semibold mb-2">Select Date</h4>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !selectedDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={selectedDate}
+                                  onSelect={(date) => {setSelectedDate(date); setSelectedSlot('');}}
+                                  disabled={(date) => {
+                                    const dateStr = format(date, 'yyyy-MM-dd');
+                                    return date < new Date() || !availableSlots.some(slot => slot.slot_date === dateStr);
+                                  }}
+                                  initialFocus
+                                  className="pointer-events-auto"
+                                />
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
-                          <div className="bg-muted p-4 rounded-lg">
+                          {selectedDate && (
+                            <div>
+                              <h4 className="font-semibold mb-2">Available Times</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {getTimeSlotsForDate(selectedDate).map((slot) => (
+                                  <Button
+                                    key={slot.id}
+                                    variant={selectedSlot === slot.id ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setSelectedSlot(slot.id)}
+                                    className="justify-center"
+                                  >
+                                    {formatTime(slot.slot_time)}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="bg-primary/10 p-4 rounded-lg">
                             <h4 className="font-semibold mb-2 flex items-center gap-2">
                               <IndianRupee className="w-4 h-4" />
-                              Interview Fee: ₹299
+                              Interview Fee: ₹399
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              Payment will be required after your request is approved by the interviewer.
+                              Instant booking - Pay now and get your interview confirmed immediately with Google Meet link.
                             </p>
                           </div>
                         </div>
 
                         <div className="flex gap-4">
                           <Button 
-                            onClick={handleRequestInterview}
+                            onClick={handleBookInterview}
                             disabled={!selectedSlot || submitting}
                             className="flex-1"
                           >
-                            {submitting ? 'Submitting...' : 'Request Interview'}
+                            {submitting ? 'Processing...' : 'Pay & Book Interview'}
                           </Button>
                         </div>
                       </div>
