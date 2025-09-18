@@ -41,10 +41,11 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action");
+    const body = await req.json();
+    const action = body.action || url.searchParams.get("action");
 
     if (action === "create-order") {
-      const { interviewerId, slotId, amount }: CreateInterviewOrderRequest = await req.json();
+      const { interviewerId, slotId, amount } = body;
 
       // Check if slot is still available
       const { data: slot, error: slotError } = await supabaseClient
@@ -122,7 +123,7 @@ serve(async (req) => {
     }
 
     if (action === "verify-payment") {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, interviewer_id, slot_id }: VerifyInterviewPaymentRequest = await req.json();
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, interviewer_id, slot_id } = body;
 
       // Verify signature
       const crypto = await import("node:crypto");

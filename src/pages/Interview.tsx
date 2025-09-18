@@ -71,7 +71,9 @@ const Interview = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  // Preload Razorpay on mount to avoid delay
   useEffect(() => {
+    loadRazorpay();
     fetchInterviewers();
     fetchMyRequests();
   }, []);
@@ -167,8 +169,24 @@ const Interview = () => {
     try {
       setSubmitting(true);
       
-      // Load Razorpay if not already loaded
-      await loadRazorpay();
+      // Create order and ensure Razorpay is loaded in parallel
+      const [orderResult] = await Promise.all([
+        supabase.functions.invoke('process-interview-payment', {
+          body: { 
+            interviewerId: selectedInterviewer.id,
+            slotId: selectedSlot,
+            amount: 399
+          },
+          headers: { 
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+        }),
+        loadRazorpay(),
+      ]);
+
+      const { data: orderData, error: orderError } = orderResult as any;
+      if (orderError) throw orderError;
 
       if (!window.Razorpay) {
         toast({
@@ -178,30 +196,6 @@ const Interview = () => {
         });
         return;
       }
-
-      // Create order by calling the edge function with action parameter
-      const createOrderUrl = new URL('/functions/v1/process-interview-payment', 'https://xwwzrahhimaaskjvsybk.supabase.co');
-      createOrderUrl.searchParams.set('action', 'create-order');
-      
-      const orderResponse = await fetch(createOrderUrl.toString(), {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          interviewerId: selectedInterviewer.id,
-          slotId: selectedSlot,
-          amount: 399
-        })
-      });
-
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
-        throw new Error(errorData.error || 'Failed to create order');
-      }
-
-      const orderData = await orderResponse.json();
 
       const options = {
         key: orderData.key,
@@ -213,31 +207,22 @@ const Interview = () => {
         order_id: orderData.orderId,
         handler: async function (response: any) {
           try {
-            // Verify payment and create interview request
-            const verifyPaymentUrl = new URL('/functions/v1/process-interview-payment', 'https://xwwzrahhimaaskjvsybk.supabase.co');
-            verifyPaymentUrl.searchParams.set('action', 'verify-payment');
-            
-            const verifyResponse = await fetch(verifyPaymentUrl.toString(), {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
+            // Verify payment using Supabase client
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('process-interview-payment', {
+              body: {
+                action: 'verify-payment',
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 interviewer_id: selectedInterviewer.id,
                 slot_id: selectedSlot,
-              })
+              },
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
             });
 
-            if (!verifyResponse.ok) {
-              const errorData = await verifyResponse.json();
-              throw new Error(errorData.error || 'Payment verification failed');
-            }
-
-            const verifyData = await verifyResponse.json();
+            if (verifyError) throw verifyError;
 
             toast({
               title: 'Interview Booked Successfully! 🎉',
