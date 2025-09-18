@@ -336,9 +336,12 @@ const Interview = () => {
                         <User className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">{request.interviewers.name}</h3>
+                        <h3 className="font-semibold">{request.interviewers?.name || 'Unknown Interviewer'}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {formatDate(request.interview_slots.slot_date)} at {formatTime(request.interview_slots.slot_time)}
+                          {request.interview_slots 
+                            ? `${formatDate(request.interview_slots.slot_date)} at ${formatTime(request.interview_slots.slot_time)}`
+                            : 'Slot details unavailable'
+                          }
                         </p>
                       </div>
                     </div>
