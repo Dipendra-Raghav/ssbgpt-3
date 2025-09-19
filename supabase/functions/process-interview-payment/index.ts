@@ -25,6 +25,13 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 405 }
+    );
+  }
+
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -50,7 +57,14 @@ serve(async (req) => {
     const action = (body as any).action || url.searchParams.get("action");
 
     if (action === "create-order") {
-      const { interviewerId, slotId, amount } = body;
+      const { interviewerId, slotId, amount } = body as any;
+
+      if (!interviewerId || !slotId || typeof amount !== "number" || amount <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Missing or invalid fields: interviewerId, slotId, amount" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
 
       // Check if slot is still available
       const { data: slot, error: slotError } = await supabaseClient
@@ -128,7 +142,14 @@ serve(async (req) => {
     }
 
     if (action === "verify-payment") {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, interviewer_id, slot_id } = body;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, interviewer_id, slot_id } = body as any;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !interviewer_id || !slot_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields for verification" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
 
       // Verify signature
       const crypto = await import("node:crypto");
@@ -194,7 +215,10 @@ serve(async (req) => {
       );
     }
 
-    throw new Error("Invalid action");
+    return new Response(
+      JSON.stringify({ error: "Invalid or missing action" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+    );
 
   } catch (error) {
     console.error("Error in process-interview-payment:", error);

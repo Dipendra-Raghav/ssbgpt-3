@@ -187,7 +187,9 @@ const Interview = () => {
       ]);
 
       const { data: orderData, error: orderError } = orderResult as any;
-      if (orderError) throw orderError;
+      if (orderError || !orderData?.orderId) {
+        throw new Error(orderError?.message || 'Failed to create payment order.');
+      }
 
       if (!window.Razorpay) {
         toast({
@@ -220,6 +222,7 @@ const Interview = () => {
               },
               headers: {
                 Authorization: `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
               },
             });
 
