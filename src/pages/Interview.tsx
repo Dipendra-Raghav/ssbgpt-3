@@ -173,6 +173,7 @@ const Interview = () => {
       const [orderResult] = await Promise.all([
         supabase.functions.invoke('process-interview-payment', {
           body: { 
+            action: 'create-order',
             interviewerId: selectedInterviewer.id,
             slotId: selectedSlot,
             amount: 399
@@ -288,12 +289,43 @@ const Interview = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
+      case 'approved': 
       case 'confirmed': return 'default';
       case 'pending': return 'secondary';
       case 'rejected': return 'destructive';
       case 'completed': return 'outline';
       default: return 'secondary';
     }
+  };
+
+  const isInterviewTime = (dateStr: string | undefined, timeStr: string | undefined) => {
+    if (!dateStr || !timeStr) return false;
+    
+    const now = new Date();
+    const interviewDateTime = new Date(`${dateStr} ${timeStr}`);
+    
+    // Allow joining 15 minutes before the interview time
+    const joinTime = new Date(interviewDateTime.getTime() - 15 * 60 * 1000);
+    
+    return now >= joinTime;
+  };
+
+  const getTimeUntilInterview = (dateStr: string | undefined, timeStr: string | undefined) => {
+    if (!dateStr || !timeStr) return 'Time unavailable';
+    
+    const now = new Date();
+    const interviewDateTime = new Date(`${dateStr} ${timeStr}`);
+    const diffMs = interviewDateTime.getTime() - now.getTime();
+    
+    if (diffMs < 0) return 'Interview started';
+    
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   if (loading) {
@@ -349,12 +381,24 @@ const Interview = () => {
                       <Badge variant={getStatusBadgeVariant(request.status)}>
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </Badge>
-                      {request.status === 'confirmed' && request.google_meet_link && (
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer">
-                            <Video className="w-4 h-4 mr-2" />
-                            Join Interview
-                          </a>
+                      {(request.status === 'approved' || request.status === 'confirmed') && request.google_meet_link && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                          asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                        >
+                          {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
+                            <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer">
+                              <Video className="w-4 h-4 mr-2" />
+                              Join Interview
+                            </a>
+                          ) : (
+                            <>
+                              <Clock className="w-4 h-4 mr-2" />
+                              {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>

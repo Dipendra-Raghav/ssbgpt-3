@@ -41,8 +41,13 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const body = await req.json();
-    const action = body.action || url.searchParams.get("action");
+    let body = {};
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.log("No JSON body provided or invalid JSON");
+    }
+    const action = (body as any).action || url.searchParams.get("action");
 
     if (action === "create-order") {
       const { interviewerId, slotId, amount } = body;
