@@ -100,21 +100,29 @@ const Interview = () => {
   };
 
   const fetchMyRequests = async () => {
+    if (!user?.id) return;
+    
     try {
       const { data, error } = await supabase
         .from('interview_requests')
         .select(`
           *,
-          interviewers (*),
-          interview_slots (*)
+          interviewers!inner(*),
+          interview_slots!inner(*)
         `)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched interview requests:', data);
       setMyRequests(data || []);
     } catch (error: any) {
       console.error('Error fetching requests:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch your interview requests.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -250,10 +258,20 @@ const Interview = () => {
           slot_id: selectedSlot,
         },
         theme: { color: '#2563eb' },
+        modal: {
+          ondismiss: function() {
+            // Reset state when modal is dismissed
+            setSubmitting(false);
+          }
+        }
       };
 
       const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
+      
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        paymentObject.open();
+      }, 100);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -359,48 +377,70 @@ const Interview = () => {
           <h2 className="text-xl font-semibold mb-4">My Interview Requests</h2>
           <div className="grid gap-4">
             {myRequests.map((request) => (
-              <Card key={request.id}>
-                <CardContent className="p-4">
+              <Card key={request.id} className="border-2 hover:border-primary/50 transition-colors">
+                <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6" />
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center border-2 border-primary/10">
+                        <User className="w-8 h-8 text-primary" />
                       </div>
                       <div>
-                        <h3 className="font-semibold">{request.interviewers?.name || 'Unknown Interviewer'}</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <CardTitle className="text-lg">{request.interviewers?.name || 'Unknown Interviewer'}</CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          <CalendarIcon className="w-4 h-4" />
                           {request.interview_slots 
                             ? `${formatDate(request.interview_slots.slot_date)} at ${formatTime(request.interview_slots.slot_time)}`
                             : 'Slot details unavailable'
                           }
-                        </p>
+                        </div>
+                        {request.interviewers && (
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                              <span>{request.interviewers.rating}</span>
+                            </div>
+                            <span>{request.interviewers.experience_years}+ years exp</span>
+                            <span>{request.interviewers.recommendations_count}x recommended</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusBadgeVariant(request.status)}>
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        variant={getStatusBadgeVariant(request.status)} 
+                        className="text-xs font-medium px-3 py-1"
+                      >
                         {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                       </Badge>
-                      {(request.status === 'approved' || request.status === 'confirmed') && request.google_meet_link && (
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                          asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                        >
-                          {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
-                            <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer">
-                              <Video className="w-4 h-4 mr-2" />
-                              Join Interview
-                            </a>
-                          ) : (
-                            <>
-                              <Clock className="w-4 h-4 mr-2" />
-                              {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                            </>
-                          )}
-                        </Button>
-                      )}
                     </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                      Booked on {formatDate(request.created_at)}
+                    </div>
+                    {(request.status === 'approved' || request.status === 'confirmed') && request.google_meet_link && (
+                      <Button 
+                        size="sm" 
+                        variant={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? "default" : "outline"}
+                        disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                        asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                        className="min-w-[140px]"
+                      >
+                        {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
+                          <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                            <Video className="w-4 h-4" />
+                            Join Interview
+                          </a>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                          </div>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
