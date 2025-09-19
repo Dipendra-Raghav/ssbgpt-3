@@ -1,73 +1,119 @@
-# Welcome to your Lovable project
+# SSB Prep Platform
 
-## Project info
+This is a web application designed to help candidates prepare for the Services Selection Board (SSB) interviews for the Indian Armed Forces. The platform provides a suite of tools and practice tests to simulate the SSB testing environment.
 
-**URL**: https://lovable.dev/projects/574d40dc-748f-4831-9c9f-4480c32d170d
+## Features
 
-## How can I edit this code?
+*   **User Authentication:** Secure sign-up and sign-in functionality.
+*   **Practice Modules:**
+    *   **PPDT (Picture Perception and Description Test):** Practice with a variety of images and write stories.
+    *   **WAT (Word Association Test):** Timed test to practice writing sentences for given words.
+    *   **SRT (Situation Reaction Test):** Practice responding to a series of situations.
+    *   **PIQ (Personal Information Questionnaire):** Fill out and save your PIQ form.
+*   **AI-Powered Evaluation:** Get feedback on your PPDT stories and other tests using AI.
+*   **Subscription & Credits:** A credit-based system to access tests and evaluations, with support for subscriptions.
+*   **Dashboard:** Track your progress and view results from past tests.
+*   **Mobile Upload:** Easily upload images from your mobile device.
+*   **Real-time Group Sessions:** Participate in group discussions for PPDT.
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+### Frontend
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/574d40dc-748f-4831-9c9f-4480c32d170d) and start prompting.
+*   **Framework:** React
+*   **Build Tool:** Vite
+*   **Language:** TypeScript
+*   **UI:** shadcn/ui
+*   **Styling:** Tailwind CSS
+*   **Routing:** React Router
+*   **State Management:** React Query
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend
 
-**Use your preferred IDE**
+*   **Platform:** Supabase
+    *   **Authentication:** Supabase Auth
+    *   **Database:** Supabase Postgres
+    *   **Functions:** Supabase Edge Functions
+    *   **Storage:** Supabase Storage
+*   **Payments:** Razorpay
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Project Structure
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+/
+├── public/             # Static assets
+├── src/
+│   ├── components/     # Reusable React components
+│   ├── hooks/          # Custom React hooks
+│   ├── integrations/   # Supabase client and types
+│   ├── lib/            # Utility functions
+│   ├── pages/          # Application pages (routes)
+│   ├── App.tsx         # Main application component with routing
+│   └── main.tsx        # Entry point of the application
+├── supabase/
+│   ├── functions/      # Supabase edge functions
+│   └── migrations/     # Database migrations
+└── package.json        # Project dependencies and scripts
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
 
-**Use GitHub Codespaces**
+*   Node.js (v18 or higher)
+*   npm or bun
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Installation
 
-## What technologies are used for this project?
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repo-url>
+    cd <repo-name>
+    ```
 
-This project is built with:
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or
+    bun install
+    ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3.  **Set up environment variables:**
 
-## How can I deploy this project?
+    Create a `.env` file in the root of the project and add your Supabase project URL and anon key:
 
-Simply open [Lovable](https://lovable.dev/projects/574d40dc-748f-4831-9c9f-4480c32d170d) and click on Share -> Publish.
+    ```env
+    VITE_SUPABASE_URL=your-supabase-url
+    VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+    ```
 
-## Can I connect a custom domain to my Lovable project?
+4.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
 
-Yes, you can!
+    The application should now be running on `http://localhost:5173`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Backend Setup (Supabase)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1.  **Create a Supabase project:**
+    *   Go to [supabase.com](https://supabase.com) and create a new project.
+    *   Copy the Project URL and anon key and add them to your `.env` file as described above.
+
+2.  **Set up the database:**
+    *   Use the Supabase CLI to apply the migrations located in the `supabase/migrations` directory.
+    ```bash
+    npx supabase login
+    npx supabase link --project-ref <your-project-id>
+    npx supabase db push
+    ```
+
+3.  **Deploy Edge Functions:**
+    *   Deploy the serverless functions from the `supabase/functions` directory.
+    ```bash
+    npx supabase functions deploy --project-ref <your-project-id>
+    ```
+
+---
+
+*This README was generated by an AI assistant.*
