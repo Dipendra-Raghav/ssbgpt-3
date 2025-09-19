@@ -48,12 +48,27 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    let body = {};
+    let body: any = {};
+    const contentType = req.headers.get("content-type") || "";
+
     try {
-      body = await req.json();
-    } catch (e) {
-      console.log("No JSON body provided or invalid JSON");
+      // Read raw body once and try multiple parse strategies
+      const raw = await req.text();
+      if (raw && raw.trim().length > 0) {
+        if (contentType.includes("application/json")) {
+          body = JSON.parse(raw);
+        } else if (contentType.includes("application/x-www-form-urlencoded")) {
+          const params = new URLSearchParams(raw);
+          body = Object.fromEntries(params.entries());
+        } else {
+          // Try JSON parse as a last resort
+          try { body = JSON.parse(raw); } catch (_) { /* ignore */ }
+        }
+      }
+    } catch (_) {
+      // Ignore parse errors and continue with empty body
     }
+
     const action = (body as any).action || url.searchParams.get("action");
 
     if (action === "create-order") {
