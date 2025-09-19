@@ -171,16 +171,14 @@ const Interview = () => {
       
       // Create order and ensure Razorpay is loaded in parallel
       const [orderResult] = await Promise.all([
-        supabase.functions.invoke('process-interview-payment', {
+        supabase.functions.invoke('interview-create-order', {
           body: { 
-            action: 'create-order',
             interviewerId: selectedInterviewer.id,
             slotId: selectedSlot,
             amount: 399
           },
           headers: { 
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${session.access_token}`
           },
         }),
         loadRazorpay(),
@@ -211,9 +209,8 @@ const Interview = () => {
         handler: async function (response: any) {
           try {
             // Verify payment using Supabase client
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('process-interview-payment', {
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('interview-verify-payment', {
               body: {
-                action: 'verify-payment',
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
@@ -222,7 +219,6 @@ const Interview = () => {
               },
               headers: {
                 Authorization: `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
               },
             });
 

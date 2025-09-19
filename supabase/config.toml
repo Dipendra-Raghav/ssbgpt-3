@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.process-interview-payment]
 verify_jwt = true
+
+[functions.interview-create-order]
+verify_jwt = true
+
+[functions.interview-verify-payment]
+verify_jwt = true
