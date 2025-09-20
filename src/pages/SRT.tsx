@@ -37,6 +37,7 @@ const SRT = () => {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [testInProgress, setTestInProgress] = useState(false);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const { isFullscreen, isSupported, toggleFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
   const [isPaused, setIsPaused] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -72,8 +73,7 @@ const SRT = () => {
       }
       const isComplete = completedCount >= practiceCount;
       if (!isActive && !isComplete) {
-        setIsActive(true);
-        setTotalTimeLeft(practiceCount * 15); // 15 seconds per question
+        setShowInstructions(true);
       }
     };
     resume();
@@ -234,8 +234,7 @@ const SRT = () => {
         response: ''
       });
       setTestInProgress(true);
-      setTotalTimeLeft(totalTime);
-      setIsActive(true);
+      setShowInstructions(true);
       setIsPaused(false);
 
       // Enter fullscreen mode
@@ -350,6 +349,14 @@ const SRT = () => {
     setUploadedImage(null);
     setTotalTimeLeft(0);
     setTestInProgress(false);
+    setShowInstructions(false);
+  };
+
+  const startActualTest = () => {
+    const totalTime = practiceCount * 15; // 15 seconds per situation
+    setShowInstructions(false);
+    setTotalTimeLeft(totalTime);
+    setIsActive(true);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -381,7 +388,7 @@ const SRT = () => {
           Situation Reaction Test (SRT)
         </h1>
         <p className="text-muted-foreground">
-          Read each situation carefully and provide your response within 15 seconds. You can type or upload a handwritten response.
+          Read each situation carefully and provide your response. You can type or upload a handwritten response.
         </p>
       </div>
 
@@ -488,35 +495,77 @@ const SRT = () => {
             </CardHeader>
           </Card>
 
+          {/* Instructions Screen */}
+          {showInstructions && (
+            <Card className="text-center border-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-primary">SRT Instructions</CardTitle>
+                <CardDescription>Read carefully before starting the test</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-left space-y-4 max-w-2xl mx-auto">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Test Process:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>You will be given <strong>60 real-life situations</strong>.</li>
+                      <li>You have <strong>30 minutes</strong> to answer as many as possible.</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Response Guidelines:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li><strong>Practical and positive</strong></li>
+                      <li><strong>Clear, concise</strong> (1–2 lines)</li>
+                      <li>Demonstrate <strong>common sense, initiative, and good judgment</strong></li>
+                    </ul>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Platform Options:</h4>
+                    <p className="text-sm">On this platform, you can either:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li><strong>Type your responses directly</strong>, OR</li>
+                      <li><strong>Click Next and upload handwritten answers</strong> at the end</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <Button onClick={startActualTest} size="lg" className="shadow-command">
+                  <Play className="w-4 h-4 mr-2" />
+                  Continue Test
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Prep/Resume */}
-          {hasStarted && completedCount < practiceCount && (!isActive || situations.length === 0) && (
+          {hasStarted && completedCount < practiceCount && (!isActive && !showInstructions) && (situations.length === 0 || isPaused) && (
             <Card className="text-center">
               <CardContent className="p-8">
                 <p className="text-muted-foreground mb-4">
-                  {situations.length === 0 ? 'Preparing your first situation...' : 'Timer paused.'}
+                  {situations.length === 0 ? 'Preparing your first situation...' : 
+                   isPaused ? 'Test paused. Click to continue in fullscreen mode.' : 'Timer paused.'}
                 </p>
-                {!isActive && (
-                  <Button variant="outline" onClick={async () => {
-                    setIsPaused(false);
-                    setIsActive(true);
-                    // Re-enter fullscreen if supported
-                    if (isSupported && !isFullscreen) {
-                      await enterFullscreen();
-                    }
-                    toast({
-                      title: 'Test Resumed',
-                      description: 'Your test has been resumed in fullscreen mode.',
-                    });
-                  }}>
-                    Resume
-                  </Button>
-                )}
+                <Button variant="outline" onClick={async () => {
+                  setIsPaused(false);
+                  setShowInstructions(true);
+                  if (isSupported && !isFullscreen) {
+                    await enterFullscreen();
+                  }
+                  toast({
+                    title: 'Test Resumed',
+                    description: 'Your test has been resumed.',
+                  });
+                }}>
+                  {isPaused ? 'Continue Test' : 'Resume'}
+                </Button>
               </CardContent>
             </Card>
           )}
 
           {/* Current Situation */}
-          {currentSituation && completedCount < practiceCount && (
+          {currentSituation && completedCount < practiceCount && isActive && !showInstructions && (
             <Card>
               <CardHeader>
                 <CardTitle>Situation {currentIndex + 1}</CardTitle>

@@ -41,7 +41,7 @@ const PPDT = () => {
   const { credits, fetchCredits, consumeCredit } = useCredits();
   const { hasActivePlan } = useSubscription();
   const [images, setImages] = useState<PPDTImage[]>([]);
-  const [viewingTimeLeft, setViewingTimeLeft] = useState(15); // 15 seconds to view image
+  const [viewingTimeLeft, setViewingTimeLeft] = useState(30); // 30 seconds to view image
   const [writingTimeLeft, setWritingTimeLeft] = useState(240); // 4 minutes to write
   const [isViewingPhase, setIsViewingPhase] = useState(false);
   const [isWritingPhase, setIsWritingPhase] = useState(false);
@@ -57,6 +57,7 @@ const PPDT = () => {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
   const [testInProgress, setTestInProgress] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   // Use persistence hook
   const { testState, updateTestState, resetTestState } = useTestPersistence('ppdt', {
@@ -109,8 +110,7 @@ const PPDT = () => {
           await fetchImages();
         }
         if (!isViewingPhase && !isWritingPhase && !isComplete && completedCount < practiceCount) {
-          setIsViewingPhase(true);
-          setViewingTimeLeft(15);
+          setShowInstructions(true);
         }
       }
     };
@@ -284,8 +284,7 @@ const PPDT = () => {
         practiceCount
       });
       setTestInProgress(true);
-      setIsViewingPhase(true);
-      setViewingTimeLeft(15);
+      setShowInstructions(true);
 
       // Enter fullscreen mode
       if (isSupported) {
@@ -329,6 +328,12 @@ const PPDT = () => {
       setIsWritingPhase(false);
       setIsComplete(true);
     }
+  };
+
+  const startActualTest = () => {
+    setShowInstructions(false);
+    setIsViewingPhase(true);
+    setViewingTimeLeft(30);
   };
 
   const preventNavigation = (e: BeforeUnloadEvent) => {
@@ -388,7 +393,7 @@ const PPDT = () => {
         setUploadedImage(null);
         setIsComplete(false);
         setIsViewingPhase(true);
-        setViewingTimeLeft(15);
+        setViewingTimeLeft(30);
       } else {
         // All images completed
         updateTestState({
@@ -420,9 +425,10 @@ const PPDT = () => {
     setIsWritingPhase(false);
     setIsComplete(false);
     setUploadedImage(null);
-    setViewingTimeLeft(15);
+    setViewingTimeLeft(30);
     setWritingTimeLeft(240);
     setTestInProgress(false);
+    setShowInstructions(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,7 +443,7 @@ const PPDT = () => {
   };
 
   const currentImage = images[currentImageIndex];
-  const viewingProgress = ((15 - viewingTimeLeft) / 15) * 100;
+  const viewingProgress = ((30 - viewingTimeLeft) / 30) * 100;
   const writingProgress = ((240 - writingTimeLeft) / 240) * 100;
 
   return (
@@ -447,7 +453,7 @@ const PPDT = () => {
           Picture Perception & Description Test (PPDT)
         </h1>
         <p className="text-muted-foreground">
-          Observe each image for 15 seconds, then write a story in 4 minutes. You can also upload a handwritten response.
+          Observe each image for 30 seconds, then write a story in 4 minutes. You can also upload a handwritten response.
         </p>
       </div>
 
@@ -557,30 +563,77 @@ const PPDT = () => {
             </CardHeader>
           </Card>
 
+          {/* Instructions Screen */}
+          {showInstructions && (
+            <Card className="text-center border-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-primary">PPDT Instructions</CardTitle>
+                <CardDescription>Read carefully before starting the test</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-left space-y-4 max-w-2xl mx-auto">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Test Process:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>You will be shown a picture for <strong>30 seconds</strong>.</li>
+                      <li>Observe carefully: note characters, their age, gender, mood, and actions.</li>
+                      <li>Write a story in <strong>4 minutes</strong> describing:
+                        <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                          <li>What led to the situation (past)</li>
+                          <li>What is happening now (present)</li>
+                          <li>What might happen next (future)</li>
+                        </ul>
+                      </li>
+                    </ol>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Story Guidelines:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Ensure your story is <strong>clear and logical</strong></li>
+                      <li><strong>Positive in tone</strong> (avoid extreme violence or negativity)</li>
+                      <li>Include characters' <strong>feelings, intentions, and actions</strong></li>
+                    </ul>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Platform Options:</h4>
+                    <p className="text-sm">On this platform, you can either:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li><strong>Type your response directly</strong>, OR</li>
+                      <li><strong>Skip and upload a handwritten story</strong> at the end</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <Button onClick={startActualTest} size="lg" className="shadow-command">
+                  <Play className="w-4 h-4 mr-2" />
+                  Continue Test
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Prep/Resume */}
-          {hasStarted && completedCount < practiceCount && (!isViewingPhase && !isWritingPhase && !isComplete || isPaused) && (
+          {hasStarted && completedCount < practiceCount && (!isViewingPhase && !isWritingPhase && !isComplete && !showInstructions) && isPaused && (
             <Card className="text-center">
               <CardContent className="p-8">
                 <p className="text-muted-foreground mb-4">
-                  {images.length === 0 ? 'Preparing your first image...' : 
-                   isPaused ? 'Test paused. Click to continue in fullscreen mode.' : 'Ready to continue.'}
+                  Test paused. Click to continue in fullscreen mode.
                 </p>
-                {(!isViewingPhase && !isWritingPhase || isPaused) && (
-                  <Button variant="outline" onClick={async () => {
-                    setIsPaused(false);
-                    setIsViewingPhase(true);
-                    setViewingTimeLeft(15);
-                    if (isSupported && !isFullscreen) {
-                      await enterFullscreen();
-                    }
-                    toast({
-                      title: 'Test Resumed',
-                      description: 'Your test has been resumed.',
-                    });
-                  }}>
-                    {isPaused ? 'Continue Test' : 'Resume'}
-                  </Button>
-                )}
+                <Button variant="outline" onClick={async () => {
+                  setIsPaused(false);
+                  setShowInstructions(true);
+                  if (isSupported && !isFullscreen) {
+                    await enterFullscreen();
+                  }
+                  toast({
+                    title: 'Test Resumed',
+                    description: 'Your test has been resumed.',
+                  });
+                }}>
+                  Continue Test
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -605,13 +658,31 @@ const PPDT = () => {
                   </div>
                 )}
                 {currentImage ? (
-                  <div className="flex justify-center">
-                    <div className="max-w-md w-full">
-                      <img
-                        src={currentImage.url}
-                        alt="PPDT Test Image"
-                        className="w-full h-auto rounded-lg border-2 border-border"
-                      />
+                  <div>
+                    <div className="flex justify-center">
+                      <div className="max-w-md w-full">
+                        <img
+                          src={currentImage.url}
+                          alt="PPDT Test Image"
+                          className="w-full h-auto rounded-lg border-2 border-border"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Next Button during observation */}
+                    <div className="flex justify-center mt-4">
+                      <Button
+                        onClick={() => {
+                          setIsViewingPhase(false);
+                          setIsWritingPhase(true);
+                          setWritingTimeLeft(240);
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <SkipForward className="w-4 h-4 mr-2" />
+                        Next (Skip to Writing)
+                      </Button>
                     </div>
                   </div>
                 ) : (

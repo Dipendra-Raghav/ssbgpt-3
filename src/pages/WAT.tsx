@@ -49,6 +49,7 @@ const WAT = () => {
   const [testInProgress, setTestInProgress] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const { isFullscreen, enterFullscreen, exitFullscreen, isSupported } = useFullscreen();
 
   // Use persistence hook
@@ -81,8 +82,7 @@ const WAT = () => {
       }
       const isComplete = completedCount >= practiceCount;
       if (!isActive && !isComplete) {
-        setIsActive(true);
-        setTimeLeft(15);
+        setShowInstructions(true);
       }
     };
     resume();
@@ -216,9 +216,8 @@ const WAT = () => {
     });
 
     setShowCountSelector(false);
-    setIsActive(true);
+    setShowInstructions(true);
     setTestInProgress(true);
-    setTimeLeft(15);
     setIsPaused(false);
     setLoading(false);
 
@@ -235,7 +234,7 @@ const WAT = () => {
 
   const resumeTest = async () => {
     setIsPaused(false);
-    setIsActive(true);
+    setShowInstructions(true);
     if (isSupported && !isFullscreen) {
       await enterFullscreen();
     }
@@ -243,6 +242,12 @@ const WAT = () => {
       title: 'Test Resumed',
       description: 'Your test has been resumed.',
     });
+  };
+
+  const startActualTest = () => {
+    setShowInstructions(false);
+    setIsActive(true);
+    setTimeLeft(15);
   };
 
   const finishEarlyTest = async () => {
@@ -517,19 +522,62 @@ const WAT = () => {
             </CardHeader>
           </Card>
 
+          {/* Instructions Screen */}
+          {showInstructions && (
+            <Card className="text-center border-primary">
+              <CardHeader>
+                <CardTitle className="text-2xl text-primary">WAT Instructions</CardTitle>
+                <CardDescription>Read carefully before starting the test</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-left space-y-4 max-w-2xl mx-auto">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Test Process:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                      <li>A word will appear on screen for <strong>15 seconds</strong>.</li>
+                      <li>Write the <strong>first thought or sentence</strong> that comes to your mind.</li>
+                      <li>Around <strong>60 words</strong> will be shown.</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Response Guidelines:</h4>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li><strong>Positive, constructive, and simple</strong></li>
+                      <li><strong>Short and natural</strong>, not memorized or fancy</li>
+                      <li>Reflect your own <strong>thought process or ideas</strong></li>
+                    </ul>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-primary">Platform Options:</h4>
+                    <p className="text-sm">On this platform, you can either:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li><strong>Type each response</strong>, OR</li>
+                      <li><strong>Click Next and upload handwritten answers</strong> at the end</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <Button onClick={startActualTest} size="lg" className="shadow-command">
+                  <Play className="w-4 h-4 mr-2" />
+                  Continue Test
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Prep/Resume */}
-          {hasStarted && completedCount < practiceCount && (!isActive || words.length === 0 || isPaused) && (
+          {hasStarted && completedCount < practiceCount && (!isActive && !showInstructions) && (words.length === 0 || isPaused) && (
             <Card className="text-center">
               <CardContent className="p-8">
                 <p className="text-muted-foreground mb-4">
                   {words.length === 0 ? 'Preparing your first word...' : 
                    isPaused ? 'Test paused. Click to continue in fullscreen mode.' : 'Timer paused.'}
                 </p>
-                {(!isActive || isPaused) && (
-                  <Button variant="outline" onClick={resumeTest}>
-                    {isPaused ? 'Continue Test' : 'Resume'}
-                  </Button>
-                )}
+                <Button variant="outline" onClick={resumeTest}>
+                  {isPaused ? 'Continue Test' : 'Resume'}
+                </Button>
               </CardContent>
             </Card>
           )}
