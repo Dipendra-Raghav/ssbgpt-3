@@ -72,6 +72,7 @@ const Interview = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
 
   // Preload Razorpay on mount to avoid delay
   useEffect(() => {
@@ -109,8 +110,8 @@ const Interview = () => {
         .from('interview_requests')
         .select(`
           *,
-          interviewers!left(*),
-          interview_slots!left(*)
+          interviewers(*),
+          interview_slots(*)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -208,6 +209,9 @@ const Interview = () => {
         return;
       }
 
+      // Close dialog before opening Razorpay
+      setBookingDialogOpen(false);
+
       const options = {
         key: orderData.key,
         amount: orderData.amount,
@@ -243,6 +247,9 @@ const Interview = () => {
             setSelectedDate(undefined);
             setSelectedSlot('');
             fetchMyRequests();
+            if (selectedInterviewer) {
+              fetchSlots(selectedInterviewer.id);
+            }
           } catch (error: any) {
             toast({
               title: 'Error',
@@ -260,12 +267,6 @@ const Interview = () => {
           slot_id: selectedSlot,
         },
         theme: { color: '#2563eb' },
-        modal: {
-          backdrop_close: false,
-          ondismiss: function() {
-            setSubmitting(false);
-          }
-        }
       };
 
       const paymentObject = new window.Razorpay(options);
@@ -313,7 +314,7 @@ const Interview = () => {
     }
   };
 
-  const isInterviewTime = (dateStr: string | undefined, timeStr: string | undefined) => {
+  const canJoinInterview = (dateStr: string | undefined, timeStr: string | undefined) => {
     if (!dateStr || !timeStr) return false;
     
     const now = new Date();
@@ -424,12 +425,12 @@ const Interview = () => {
                           <TooltipTrigger asChild>
                             <Button 
                               size="sm" 
-                              variant={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? "default" : "outline"}
-                              disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                              asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                              variant={canJoinInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? "default" : "outline"}
+                              disabled={!canJoinInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                              asChild={canJoinInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
                               className="min-w-[140px]"
                             >
-                              {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
+                              {canJoinInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
                                 <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                                   <Video className="w-4 h-4" />
                                   Join Interview
@@ -437,13 +438,18 @@ const Interview = () => {
                               ) : (
                                 <div className="flex items-center gap-2">
                                   <Clock className="w-4 h-4" />
-                                  {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                                  Join Interview
                                 </div>
                               )}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Available 15 minutes before interview</p>
+                            <p>
+                              {canJoinInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)
+                                ? "Click to join your interview"
+                                : "Available 15 minutes before interview time"
+                              }
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -497,7 +503,7 @@ const Interview = () => {
                   <p className="text-sm text-muted-foreground">{interviewer.experience_years} years</p>
                 </div>
 
-                <Dialog>
+                <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
                       className="w-full" 
