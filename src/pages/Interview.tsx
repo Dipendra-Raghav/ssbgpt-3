@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { 
@@ -70,6 +71,7 @@ const Interview = () => {
   const [myRequests, setMyRequests] = useState<InterviewRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Preload Razorpay on mount to avoid delay
   useEffect(() => {
@@ -107,8 +109,8 @@ const Interview = () => {
         .from('interview_requests')
         .select(`
           *,
-          interviewers!inner(*),
-          interview_slots!inner(*)
+          interviewers!left(*),
+          interview_slots!left(*)
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -259,19 +261,15 @@ const Interview = () => {
         },
         theme: { color: '#2563eb' },
         modal: {
+          backdrop_close: false,
           ondismiss: function() {
-            // Reset state when modal is dismissed
             setSubmitting(false);
           }
         }
       };
 
       const paymentObject = new window.Razorpay(options);
-      
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        paymentObject.open();
-      }, 100);
+      paymentObject.open();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -421,25 +419,34 @@ const Interview = () => {
                       Booked on {formatDate(request.created_at)}
                     </div>
                     {(request.status === 'approved' || request.status === 'confirmed') && request.google_meet_link && (
-                      <Button 
-                        size="sm" 
-                        variant={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? "default" : "outline"}
-                        disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                        asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                        className="min-w-[140px]"
-                      >
-                        {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
-                          <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                            <Video className="w-4 h-4" />
-                            Join Interview
-                          </a>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
-                          </div>
-                        )}
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? "default" : "outline"}
+                              disabled={!isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                              asChild={isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                              className="min-w-[140px]"
+                            >
+                              {isInterviewTime(request.interview_slots?.slot_date, request.interview_slots?.slot_time) ? (
+                                <a href={request.google_meet_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                  <Video className="w-4 h-4" />
+                                  Join Interview
+                                </a>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4" />
+                                  {getTimeUntilInterview(request.interview_slots?.slot_date, request.interview_slots?.slot_time)}
+                                </div>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Available 15 minutes before interview</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </div>
                 </CardContent>
@@ -517,7 +524,7 @@ const Interview = () => {
                           
                           <div>
                             <h4 className="font-semibold mb-2">Select Date</h4>
-                            <Popover>
+                            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
@@ -534,7 +541,11 @@ const Interview = () => {
                                 <Calendar
                                   mode="single"
                                   selected={selectedDate}
-                                  onSelect={(date) => {setSelectedDate(date); setSelectedSlot('');}}
+                                  onSelect={(date) => {
+                                    setSelectedDate(date); 
+                                    setSelectedSlot(''); 
+                                    setDatePickerOpen(false);
+                                  }}
                                   disabled={(date) => {
                                     const dateStr = format(date, 'yyyy-MM-dd');
                                     return date < new Date() || !availableSlots.some(slot => slot.slot_date === dateStr);
