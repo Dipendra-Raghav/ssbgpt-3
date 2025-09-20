@@ -530,7 +530,7 @@ const Interview = () => {
                           
                           <div>
                             <h4 className="font-semibold mb-2">Select Date</h4>
-                            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                            <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
@@ -543,21 +543,21 @@ const Interview = () => {
                                   {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent className="w-auto p-0 z-50" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={selectedDate}
                                   onSelect={(date) => {
                                     setSelectedDate(date); 
-                                    setSelectedSlot(''); 
-                                    setDatePickerOpen(false);
+                                    setSelectedSlot('');
+                                    // Let the popover close naturally after date selection
                                   }}
                                   disabled={(date) => {
                                     const dateStr = format(date, 'yyyy-MM-dd');
                                     return date < new Date() || !availableSlots.some(slot => slot.slot_date === dateStr);
                                   }}
                                   initialFocus
-                                  className="pointer-events-auto"
+                                  className="p-3 pointer-events-auto"
                                 />
                               </PopoverContent>
                             </Popover>
