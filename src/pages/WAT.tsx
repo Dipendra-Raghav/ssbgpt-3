@@ -536,7 +536,6 @@ const WAT = () => {
                     <ol className="list-decimal list-inside space-y-1 text-sm">
                       <li>A word will appear on screen for <strong>15 seconds</strong>.</li>
                       <li>Write the <strong>first thought or sentence</strong> that comes to your mind.</li>
-                      <li>Around <strong>60 words</strong> will be shown.</li>
                     </ol>
                   </div>
                   
