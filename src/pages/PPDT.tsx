@@ -93,13 +93,34 @@ const PPDT = () => {
       setIsPaused(true);
       setIsViewingPhase(false);
       setIsWritingPhase(false);
+      updateTestState({ isPaused: true });
       toast({
         title: 'Test Paused',
         description: 'Test paused due to exiting fullscreen mode.',
         variant: 'default',
       });
     }
-  }, [isFullscreen, testInProgress, isSupported]);
+  }, [isFullscreen, testInProgress, isSupported, updateTestState]);
+
+  // Visibility change handler - pause test when navigating away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (testInProgress && document.hidden) {
+        setIsPaused(true);
+        setIsViewingPhase(false);
+        setIsWritingPhase(false);
+        updateTestState({ isPaused: true });
+        toast({
+          title: 'Test Paused',
+          description: 'Test paused due to navigating away from the page.',
+          variant: 'default',
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [testInProgress, updateTestState]);
 
   // Resume session if user returns mid-test
   useEffect(() => {
@@ -355,6 +376,7 @@ const PPDT = () => {
     setShowInstructions(false);
     setIsViewingPhase(true);
     setViewingTimeLeft(30);
+    setIsPaused(false);
     // Mark instructions as shown and persist state
     updateTestState({ 
       instructionsShown: true,

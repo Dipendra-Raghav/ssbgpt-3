@@ -182,13 +182,33 @@ const WAT = () => {
     if (testInProgress && !isFullscreen && isSupported) {
       setIsPaused(true);
       setIsActive(false);
+      updateTestState({ isPaused: true, isActive: false });
       toast({
         title: 'Test Paused',
         description: 'Test paused due to exiting fullscreen mode.',
         variant: 'default',
       });
     }
-  }, [isFullscreen, testInProgress, isSupported]);
+  }, [isFullscreen, testInProgress, isSupported, updateTestState]);
+
+  // Visibility change handler - pause test when navigating away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (testInProgress && document.hidden) {
+        setIsPaused(true);
+        setIsActive(false);
+        updateTestState({ isPaused: true, isActive: false });
+        toast({
+          title: 'Test Paused',
+          description: 'Test paused due to navigating away from the page.',
+          variant: 'default',
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [testInProgress, updateTestState]);
 
   const getMaxAllowedWords = () => {
     if (hasActivePlan()) return 30; // Premium users can select up to 30
@@ -277,6 +297,7 @@ const WAT = () => {
   const startActualTest = () => {
     setShowInstructions(false);
     setIsActive(true);
+    setIsPaused(false);
     setTimeLeft(15);
     // Mark instructions as shown and persist state
     updateTestState({ 

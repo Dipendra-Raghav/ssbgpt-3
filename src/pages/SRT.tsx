@@ -179,13 +179,52 @@ const SRT = () => {
     if (testInProgress && !isFullscreen && isSupported) {
       setIsPaused(true);
       setIsActive(false);
+      updateTestState({ isPaused: true, isActive: false });
       toast({
         title: 'Test Paused',
         description: 'Test paused due to exiting fullscreen mode.',
         variant: 'default',
       });
     }
-  }, [isFullscreen, testInProgress, isSupported]);
+  }, [isFullscreen, testInProgress, isSupported, updateTestState]);
+
+  // Visibility change handler - pause test when navigating away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (testInProgress && document.hidden) {
+        setIsPaused(true);
+        setIsActive(false);
+        updateTestState({ isPaused: true, isActive: false });
+        toast({
+          title: 'Test Paused',
+          description: 'Test paused due to navigating away from the page.',
+          variant: 'default',
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [testInProgress, updateTestState]);
+
+  // Visibility change handler - pause test when navigating away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (testInProgress && document.hidden) {
+        setIsPaused(true);
+        setIsActive(false);
+        updateTestState({ isPaused: true, isActive: false });
+        toast({
+          title: 'Test Paused',
+          description: 'Test paused due to navigating away from the page.',
+          variant: 'default',
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [testInProgress, updateTestState]);
 
   const checkCreditsAndStart = async () => {
     if (hasActivePlan()) {
@@ -381,6 +420,7 @@ const SRT = () => {
     setShowInstructions(false);
     setTotalTimeLeft(totalTime);
     setIsActive(true);
+    setIsPaused(false);
     // Mark instructions as shown and persist state
     updateTestState({ 
       instructionsShown: true,
