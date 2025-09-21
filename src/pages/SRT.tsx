@@ -507,8 +507,8 @@ const SRT = () => {
                   <div className="space-y-2">
                     <h4 className="font-semibold text-primary">Test Process:</h4>
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>You will be given <strong>60 real-life situations</strong>.</li>
-                      <li>You have <strong>30 minutes</strong> to answer as many as possible.</li>
+                      <li>You will be given <strong> real-life situations</strong>.</li>
+                      <li>You have <strong>timer</strong> shown to answer as many as possible.</li>
                     </ol>
                   </div>
                   
