@@ -77,21 +77,25 @@ const RoomRegister = () => {
 
       const enrolledRoomIds = new Set(enrollments?.map(e => e.room_id) || []);
 
-      // Fetch participant counts for each room
-      const roomsWithEnrollmentStatus = await Promise.all(
-        (roomsData || []).map(async (room) => {
-          const { count } = await supabase
-            .from('room_enrollments')
-            .select('*', { count: 'exact', head: true })
-            .eq('room_id', room.id);
+      // Fetch participant counts in one RPC to bypass RLS and reduce requests
+      const roomIds = (roomsData || []).map((r) => r.id);
+      let countsMap = new Map<string, number>();
+      if (roomIds.length > 0) {
+        const { data: countsData, error: countsError } = await supabase.rpc(
+          'get_room_participant_counts',
+          { p_room_ids: roomIds }
+        );
+        if (countsError) throw countsError;
+        countsMap = new Map(
+          (countsData as { room_id: string; participant_count: number }[]).map((row) => [row.room_id, row.participant_count])
+        );
+      }
 
-          return {
-            ...room,
-            is_enrolled: enrolledRoomIds.has(room.id),
-            participant_count: count || 0
-          };
-        })
-      );
+      const roomsWithEnrollmentStatus = (roomsData || []).map((room) => ({
+        ...room,
+        is_enrolled: enrolledRoomIds.has(room.id),
+        participant_count: countsMap.get(room.id) || 0,
+      }));
 
       setRooms(roomsWithEnrollmentStatus);
     } catch (error) {

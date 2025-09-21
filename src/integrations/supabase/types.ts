@@ -811,6 +811,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_room_participant_counts: {
+        Args: { p_room_ids: string[] }
+        Returns: {
+          participant_count: number
+          room_id: string
+        }[]
+      }
       reset_daily_credits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
