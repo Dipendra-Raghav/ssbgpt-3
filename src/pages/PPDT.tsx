@@ -159,12 +159,17 @@ const PPDT = () => {
       const { data, error } = await supabase
         .from('ppdt_images')
         .select('*')
-        .order('random()')
-        .limit(practiceCount);
+        .limit(practiceCount * 3); // Fetch more images than needed for better randomization
 
       if (error) throw error;
-      setImages(data || []);
-      return data || [];
+      
+      // Shuffle and take only the needed amount
+      const shuffled = (data || [])
+        .sort(() => Math.random() - 0.5)
+        .slice(0, practiceCount);
+      
+      setImages(shuffled);
+      return shuffled;
     } catch (error: any) {
       toast({
         title: 'Error',

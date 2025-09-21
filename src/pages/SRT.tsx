@@ -102,12 +102,17 @@ const SRT = () => {
       const { data, error } = await supabase
         .from('srt_situations')
         .select('*')
-        .order('random()')
-        .limit(practiceCount);
+        .limit(practiceCount * 3); // Fetch more situations than needed for better randomization
 
       if (error) throw error;
-      setSituations(data || []);
-      return data || [];
+      
+      // Shuffle and take only the needed amount
+      const shuffled = (data || [])
+        .sort(() => Math.random() - 0.5)
+        .slice(0, practiceCount);
+      
+      setSituations(shuffled);
+      return shuffled;
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -189,25 +194,6 @@ const SRT = () => {
       });
     }
   }, [isFullscreen, testInProgress, isSupported, updateTestState]);
-
-  // Visibility change handler - pause test when navigating away
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (testInProgress && document.hidden) {
-        setIsPaused(true);
-        setIsActive(false);
-        updateTestState({ isPaused: true, isActive: false });
-        toast({
-          title: 'Test Paused',
-          description: 'Test paused due to navigating away from the page.',
-          variant: 'default',
-        });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [testInProgress, updateTestState]);
 
   // Visibility change handler - pause test when navigating away
   useEffect(() => {

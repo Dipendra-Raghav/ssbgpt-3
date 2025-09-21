@@ -103,18 +103,22 @@ const WAT = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasStarted]);
 
-  // Fetch WAT words
   const fetchWords = async () => {
     try {
       const { data, error } = await supabase
         .from('wat_words')
         .select('*')
-        .order('random()')
-        .limit(practiceCount);
+        .limit(practiceCount * 3); // Fetch more words than needed for better randomization
 
       if (error) throw error;
-      setWords(data || []);
-      return data || [];
+      
+      // Shuffle and take only the needed amount
+      const shuffled = (data || [])
+        .sort(() => Math.random() - 0.5)
+        .slice(0, practiceCount);
+      
+      setWords(shuffled);
+      return shuffled;
     } catch (error: any) {
       toast({
         title: 'Error',
