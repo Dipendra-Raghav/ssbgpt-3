@@ -252,7 +252,7 @@ const PPDT = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isViewingPhase, viewingTimeLeft, isPaused, updateTestState]);
+  }, [isViewingPhase, viewingTimeLeft, isPaused]);
 
   // Fallback to show start button if timer stalls
   useEffect(() => {
@@ -283,7 +283,7 @@ const PPDT = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isWritingPhase, writingTimeLeft, isPaused, updateTestState]);
+  }, [isWritingPhase, writingTimeLeft, isPaused]);
 
   const [starting, setStarting] = useState(false);
 

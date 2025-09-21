@@ -191,7 +191,7 @@ const WAT = () => {
     }
 
     return () => clearInterval(interval);
-  }, [isActive, timeLeft, isPaused, updateTestState]);
+  }, [isActive, timeLeft, isPaused]);
 
   // Fullscreen exit handler - pause test
   useEffect(() => {

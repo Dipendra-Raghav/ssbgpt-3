@@ -159,7 +159,7 @@ const SRT = () => {
     }
   };
 
-  // Timer logic - Total test time (15 minutes per situation)
+  // Timer logic - Total test time (15 seconds per situation)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
@@ -186,7 +186,7 @@ const SRT = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, totalTimeLeft, isPaused, updateTestState]);
+  }, [isActive, totalTimeLeft, isPaused]);
 
   const [starting, setStarting] = useState(false);
 
@@ -424,7 +424,7 @@ const SRT = () => {
   };
 
   const startActualTest = () => {
-    const totalTime = practiceCount * 30 * 60; // 30 minutes total
+    const totalTime = practiceCount * 15; // 15 seconds per SRT
     setShowInstructions(false);
     setTotalTimeLeft(totalTime);
     setIsActive(true);
@@ -451,7 +451,7 @@ const SRT = () => {
 
   const progressPercentage = practiceCount > 0 ? (responses.length / practiceCount) * 100 : 0;
   const currentSituation = situations[currentIndex];
-  const totalTestTime = practiceCount * 15 * 60;
+  const totalTestTime = practiceCount * 15;
   const timeProgress = totalTestTime > 0 ? ((totalTestTime - totalTimeLeft) / totalTestTime) * 100 : 0;
   
   const formatTime = (seconds: number) => {
