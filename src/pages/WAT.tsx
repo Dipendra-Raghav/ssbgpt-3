@@ -93,6 +93,16 @@ const WAT = () => {
       if (testState.isPaused !== undefined) {
         setIsPaused(testState.isPaused);
       }
+
+      // Ensure session and controls are active on return (but paused)
+      if (!isComplete) {
+        setHasActiveSession(true);
+        setTestInProgress(true);
+        // Always come back paused with controls enabled
+        setIsPaused(true);
+        setIsActive(false);
+        updateTestState({ isPaused: true, isActive: false });
+      }
       
       // Only show instructions if they haven't been shown yet
       if (!testState.instructionsShown && !isComplete && !testState.isActive) {
@@ -214,6 +224,15 @@ const WAT = () => {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [testInProgress, updateTestState]);
+
+  // On unmount, persist paused state so controls remain enabled on return
+  useEffect(() => {
+    return () => {
+      if (testInProgress) {
+        updateTestState({ isPaused: true, isActive: false });
+      }
+    };
   }, [testInProgress, updateTestState]);
 
   const getMaxAllowedWords = () => {

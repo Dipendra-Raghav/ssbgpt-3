@@ -123,6 +123,15 @@ const PPDT = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [testInProgress, updateTestState]);
 
+  // On unmount, persist paused state so controls remain enabled on return
+  useEffect(() => {
+    return () => {
+      if (testInProgress) {
+        updateTestState({ isPaused: true });
+      }
+    };
+  }, [testInProgress, updateTestState]);
+
   // Resume session if user returns mid-test
   useEffect(() => {
     const resume = async () => {
@@ -141,6 +150,17 @@ const PPDT = () => {
         }
         if (testState.isPaused !== undefined) {
           setIsPaused(testState.isPaused);
+        }
+        
+        // Ensure session and controls are active on return (but paused)
+        const isComplete = completedCount >= practiceCount;
+        if (!isComplete) {
+          setHasActiveSession(true);
+          setTestInProgress(true);
+          setIsPaused(true);
+          setIsViewingPhase(false);
+          setIsWritingPhase(false);
+          updateTestState({ isPaused: true });
         }
         
         // Only show instructions if they haven't been shown yet
