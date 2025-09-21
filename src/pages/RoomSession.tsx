@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Users, Clock, UserCheck, ExternalLink, Video, Mic, CheckCircle, Circle } from "lucide-react";
+import { ArrowLeft, Users, Clock, UserCheck, ExternalLink, Video, Mic, CheckCircle, Circle, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 
 interface RoomDetails {
@@ -21,6 +21,7 @@ interface RoomDetails {
   mod_email: string;
   google_meet_link: string;
   room_image_url: string;
+  room_file_url: string;
   participant_count: number;
 }
 
@@ -294,6 +295,52 @@ const RoomSession = () => {
                 <span>{room.participant_count} participants</span>
               </div>
             </div>
+
+            {/* Room File Section */}
+            {room.room_file_url && (
+              <div className="pt-4 border-t">
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Room Material
+                </h4>
+                <div className="p-3 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">Discussion Material</p>
+                        <p className="text-xs text-muted-foreground">
+                          Shared by moderator for this session
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(room.room_file_url, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = room.room_file_url;
+                          link.download = 'room-material';
+                          link.click();
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

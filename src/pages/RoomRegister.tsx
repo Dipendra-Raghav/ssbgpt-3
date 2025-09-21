@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Calendar, Clock, Users, UserCheck } from "lucide-react";
 import { format } from "date-fns";
+import EnrollmentDialog from "@/components/EnrollmentDialog";
 
 interface Room {
   id: string;
@@ -26,12 +27,31 @@ const RoomRegister = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [enrollingRoomId, setEnrollingRoomId] = useState<string | null>(null);
+  const [showEnrollDialog, setShowEnrollDialog] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchRooms();
+    fetchUserPhone();
   }, []);
+
+  const fetchUserPhone = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setUserPhone(data?.phone || null);
+    } catch (error) {
+      console.error('Error fetching user phone:', error);
+    }
+  };
 
   const fetchRooms = async () => {
     try {
@@ -86,47 +106,87 @@ const RoomRegister = () => {
     }
   };
 
-  const handleEnrollment = async (roomId: string, isEnrolled: boolean) => {
+  const handleEnrollClick = (room: Room) => {
+    if (room.is_enrolled) {
+      // Direct unenroll without dialog
+      handleUnenroll(room.id);
+    } else {
+      // Show enrollment dialog
+      setSelectedRoom(room);
+      setShowEnrollDialog(true);
+    }
+  };
+
+  const handleUnenroll = async (roomId: string) => {
     try {
       setEnrollingRoomId(roomId);
 
-      if (isEnrolled) {
-        // Unenroll
-        const { error } = await supabase
-          .from('room_enrollments')
-          .delete()
-          .eq('room_id', roomId)
+      const { error } = await supabase
+        .from('room_enrollments')
+        .delete()
+        .eq('room_id', roomId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Unenrolled",
+        description: "You have been unenrolled from the room",
+      });
+
+      await fetchRooms();
+    } catch (error) {
+      console.error('Error with unenrollment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unenroll from room",
+        variant: "destructive",
+      });
+    } finally {
+      setEnrollingRoomId(null);
+    }
+  };
+
+  const handleEnrollConfirm = async (phoneNumber?: string) => {
+    if (!selectedRoom) return;
+
+    try {
+      setEnrollingRoomId(selectedRoom.id);
+
+      // Update phone number if provided
+      if (phoneNumber && phoneNumber !== userPhone) {
+        const { error: phoneError } = await supabase
+          .from('profiles')
+          .update({ phone: phoneNumber })
           .eq('user_id', user?.id);
 
-        if (error) throw error;
-
-        toast({
-          title: "Unenrolled",
-          description: "You have been unenrolled from the room",
-        });
-      } else {
-        // Enroll
-        const { error } = await supabase
-          .from('room_enrollments')
-          .insert({
-            room_id: roomId,
-            user_id: user?.id
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "Enrolled",
-          description: "You have been enrolled in the room",
-        });
+        if (phoneError) throw phoneError;
+        setUserPhone(phoneNumber);
       }
 
+      // Enroll in room
+      const { error } = await supabase
+        .from('room_enrollments')
+        .insert({
+          room_id: selectedRoom.id,
+          user_id: user?.id
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Enrolled Successfully",
+        description: `You have been enrolled in ${selectedRoom.title}`,
+      });
+
+      setShowEnrollDialog(false);
+      setSelectedRoom(null);
       await fetchRooms();
     } catch (error) {
       console.error('Error with enrollment:', error);
       toast({
         title: "Error",
-        description: "Failed to update enrollment",
+        description: "Failed to enroll in room",
         variant: "destructive",
       });
     } finally {
@@ -240,7 +300,7 @@ const RoomRegister = () => {
               </div>
 
               <Button
-                onClick={() => handleEnrollment(room.id, room.is_enrolled || false)}
+                onClick={() => handleEnrollClick(room)}
                 disabled={
                   enrollingRoomId === room.id || 
                   (!room.is_enrolled && (room.participant_count || 0) >= room.max_participants)
@@ -273,6 +333,18 @@ const RoomRegister = () => {
           </p>
         </div>
       )}
+
+      <EnrollmentDialog
+        isOpen={showEnrollDialog}
+        onClose={() => {
+          setShowEnrollDialog(false);
+          setSelectedRoom(null);
+        }}
+        onConfirm={handleEnrollConfirm}
+        isLoading={enrollingRoomId === selectedRoom?.id}
+        roomTitle={selectedRoom?.title || ""}
+        userPhone={userPhone}
+      />
     </div>
   );
 };

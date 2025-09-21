@@ -497,6 +497,7 @@ export type Database = {
           max_participants: number
           mod_email: string | null
           mod_name: string
+          room_file_url: string | null
           room_image_url: string | null
           room_type: string
           scheduled_datetime: string
@@ -513,6 +514,7 @@ export type Database = {
           max_participants?: number
           mod_email?: string | null
           mod_name: string
+          room_file_url?: string | null
           room_image_url?: string | null
           room_type: string
           scheduled_datetime: string
@@ -529,6 +531,7 @@ export type Database = {
           max_participants?: number
           mod_email?: string | null
           mod_name?: string
+          room_file_url?: string | null
           room_image_url?: string | null
           room_type?: string
           scheduled_datetime?: string
