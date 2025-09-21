@@ -40,6 +40,7 @@ const SRT = () => {
   const [showInstructions, setShowInstructions] = useState(false);
   const { isFullscreen, isSupported, toggleFullscreen, enterFullscreen, exitFullscreen } = useFullscreen();
   const [isPaused, setIsPaused] = useState(false);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
 
@@ -101,6 +102,7 @@ const SRT = () => {
       const { data, error } = await supabase
         .from('srt_situations')
         .select('*')
+        .order('random()')
         .limit(practiceCount);
 
       if (error) throw error;
@@ -285,6 +287,7 @@ const SRT = () => {
     }
 
     setShowCountSelector(false);
+    setHasActiveSession(true);
     const fetchedSituations = await fetchSituations();
     if (fetchedSituations.length > 0) {
       const totalTime = practiceCount * 15; // 15 seconds per situation
@@ -412,6 +415,7 @@ const SRT = () => {
     setUploadedImage(null);
     setTotalTimeLeft(0);
     setTestInProgress(false);
+    setHasActiveSession(false);
     setShowInstructions(false);
   };
 
@@ -558,7 +562,7 @@ const SRT = () => {
                          });
                        }
                      }}
-                     disabled={!testInProgress}
+                      disabled={!hasActiveSession}
                    >
                      {isPaused ? 'Resume Test' : 'Pause Test'}
                    </Button>
@@ -567,7 +571,7 @@ const SRT = () => {
                        <Button
                          variant="destructive"
                          size="sm"
-                         disabled={!testInProgress}
+                         disabled={!hasActiveSession}
                        >
                          <Square className="w-4 h-4 mr-2" />
                          Finish Early

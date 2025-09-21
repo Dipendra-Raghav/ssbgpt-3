@@ -48,6 +48,7 @@ const WAT = () => {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [testInProgress, setTestInProgress] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const { isFullscreen, enterFullscreen, exitFullscreen, isSupported } = useFullscreen();
@@ -108,6 +109,7 @@ const WAT = () => {
       const { data, error } = await supabase
         .from('wat_words')
         .select('*')
+        .order('random()')
         .limit(practiceCount);
 
       if (error) throw error;
@@ -258,6 +260,7 @@ const WAT = () => {
     setShowCountSelector(false);
     setShowInstructions(true);
     setTestInProgress(true);
+    setHasActiveSession(true);
     setIsPaused(false);
     setLoading(false);
 
@@ -315,6 +318,7 @@ const WAT = () => {
     setTestInProgress(false);
     setIsActive(false);
     setIsPaused(false);
+    setHasActiveSession(false);
     
     // Exit fullscreen
     if (isFullscreen && isSupported) {
@@ -341,6 +345,7 @@ const WAT = () => {
       });
       setTestInProgress(false);
       setIsActive(false);
+      setHasActiveSession(false);
       toast({
         title: 'WAT Practice Complete!',
         description: `You have completed all ${practiceCount} words.`,
@@ -401,6 +406,7 @@ const WAT = () => {
         });
         setTestInProgress(false);
         setIsActive(false);
+        setHasActiveSession(false);
         toast({
           title: 'WAT Practice Complete!',
           description: `You have completed all ${practiceCount} words.`,
@@ -556,7 +562,7 @@ const WAT = () => {
                          });
                        }
                      }}
-                     disabled={!testInProgress}
+                      disabled={!hasActiveSession}
                    >
                      {isPaused ? 'Resume Test' : 'Pause Test'}
                    </Button>
@@ -565,7 +571,7 @@ const WAT = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={!testInProgress}
+                        disabled={!hasActiveSession}
                       >
                         <Square className="w-4 h-4 mr-2" />
                         Finish Early
@@ -851,8 +857,9 @@ const WAT = () => {
                        setIsActive(false);
                        setUploadedImage(null);
                        setTimeLeft(15);
-                       setTestInProgress(false);
-                       setIsPaused(false);
+                        setTestInProgress(false);
+                        setIsPaused(false);
+                        setHasActiveSession(false);
                      }}
                    >
                      Practice Again

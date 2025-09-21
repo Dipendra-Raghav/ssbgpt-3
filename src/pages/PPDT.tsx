@@ -57,6 +57,7 @@ const PPDT = () => {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
   const [testInProgress, setTestInProgress] = useState(false);
+  const [hasActiveSession, setHasActiveSession] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
   // Use persistence hook
@@ -158,6 +159,7 @@ const PPDT = () => {
       const { data, error } = await supabase
         .from('ppdt_images')
         .select('*')
+        .order('random()')
         .limit(practiceCount);
 
       if (error) throw error;
@@ -319,6 +321,7 @@ const PPDT = () => {
     }
 
     setShowCountSelector(false);
+    setHasActiveSession(true);
     const fetchedImages = await fetchImages();
     if (fetchedImages.length > 0) {
       updateTestState({ 
@@ -477,6 +480,7 @@ const PPDT = () => {
     setViewingTimeLeft(30);
     setWritingTimeLeft(240);
     setTestInProgress(false);
+    setHasActiveSession(false);
     setShowInstructions(false);
   };
 
@@ -609,7 +613,7 @@ const PPDT = () => {
                          });
                        }
                      }}
-                     disabled={!testInProgress}
+                      disabled={!hasActiveSession}
                    >
                      {isPaused ? 'Resume Test' : 'Pause Test'}
                    </Button>
@@ -618,7 +622,7 @@ const PPDT = () => {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={!testInProgress}
+                        disabled={!hasActiveSession}
                       >
                         <Square className="w-4 h-4 mr-2" />
                         Finish Early
