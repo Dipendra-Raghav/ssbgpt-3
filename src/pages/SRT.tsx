@@ -72,7 +72,20 @@ const SRT = () => {
         await fetchSituations();
       }
       const isComplete = completedCount >= practiceCount;
-      if (!isActive && !isComplete) {
+      
+      // Restore timer state
+      if (testState.totalTimeLeft !== undefined) {
+        setTotalTimeLeft(testState.totalTimeLeft);
+      }
+      if (testState.isActive !== undefined) {
+        setIsActive(testState.isActive);
+      }
+      if (testState.isPaused !== undefined) {
+        setIsPaused(testState.isPaused);
+      }
+      
+      // Only show instructions if they haven't been shown yet
+      if (!testState.instructionsShown && !isComplete && !testState.isActive) {
         setShowInstructions(true);
       }
     };
@@ -134,19 +147,30 @@ const SRT = () => {
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
-    if (isActive && totalTimeLeft > 0) {
+    if (isActive && totalTimeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
-        setTotalTimeLeft(time => time - 1);
+        setTotalTimeLeft(time => {
+          const newTime = time - 1;
+          // Persist timer state
+          updateTestState({ 
+            totalTimeLeft: newTime,
+            isActive: newTime > 0 ? isActive : false,
+            isPaused 
+          });
+          
+          if (newTime === 0) {
+            // Auto-finish when total time is up
+            finishEarlyTest();
+          }
+          return newTime;
+        });
       }, 1000);
-    } else if (isActive && totalTimeLeft === 0) {
-      // Auto-finish when total time is up
-      finishEarlyTest();
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, totalTimeLeft]);
+  }, [isActive, totalTimeLeft, isPaused, updateTestState]);
 
   const [starting, setStarting] = useState(false);
 
@@ -353,10 +377,17 @@ const SRT = () => {
   };
 
   const startActualTest = () => {
-    const totalTime = practiceCount * 15; // 15 seconds per situation
+    const totalTime = practiceCount * 30 * 60; // 30 minutes total
     setShowInstructions(false);
     setTotalTimeLeft(totalTime);
     setIsActive(true);
+    // Mark instructions as shown and persist state
+    updateTestState({ 
+      instructionsShown: true,
+      isActive: true,
+      totalTimeLeft: totalTime,
+      isPaused: false
+    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -455,15 +486,42 @@ const SRT = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {isSupported && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleFullscreen}
-                    >
-                      {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </Button>
-                  )}
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={() => {
+                       if (isPaused) {
+                         setIsPaused(false);
+                         updateTestState({ isPaused: false });
+                         
+                         if (!testState.instructionsShown) {
+                           setShowInstructions(true);
+                         } else {
+                           setIsActive(true);
+                           updateTestState({ isActive: true });
+                         }
+                         
+                         if (isSupported && !isFullscreen) {
+                           enterFullscreen();
+                         }
+                         toast({
+                           title: 'Test Resumed',
+                           description: 'Your test has been resumed.',
+                         });
+                       } else {
+                         setIsPaused(true);
+                         setIsActive(false);
+                         updateTestState({ isPaused: true, isActive: false });
+                         toast({
+                           title: 'Test Paused',
+                           description: 'Test has been paused.',
+                         });
+                       }
+                     }}
+                     disabled={!testInProgress}
+                   >
+                     {isPaused ? 'Resume Test' : 'Pause Test'}
+                   </Button>
                    <AlertDialog>
                      <AlertDialogTrigger asChild>
                        <Button
@@ -547,17 +605,27 @@ const SRT = () => {
                   {situations.length === 0 ? 'Preparing your first situation...' : 
                    isPaused ? 'Test paused. Click to continue in fullscreen mode.' : 'Timer paused.'}
                 </p>
-                <Button variant="outline" onClick={async () => {
-                  setIsPaused(false);
-                  setShowInstructions(true);
-                  if (isSupported && !isFullscreen) {
-                    await enterFullscreen();
-                  }
-                  toast({
-                    title: 'Test Resumed',
-                    description: 'Your test has been resumed.',
-                  });
-                }}>
+                 <Button variant="outline" onClick={async () => {
+                   setIsPaused(false);
+                   updateTestState({ isPaused: false });
+                   
+                   // Only show instructions if they haven't been shown before
+                   if (!testState.instructionsShown) {
+                     setShowInstructions(true);
+                   } else {
+                     // Resume directly without instructions
+                     setIsActive(true);
+                     updateTestState({ isActive: true });
+                   }
+                   
+                   if (isSupported && !isFullscreen) {
+                     await enterFullscreen();
+                   }
+                   toast({
+                     title: 'Test Resumed',
+                     description: 'Your test has been resumed.',
+                   });
+                 }}>
                   {isPaused ? 'Continue Test' : 'Resume'}
                 </Button>
               </CardContent>

@@ -13,6 +13,14 @@ interface TestState {
   story?: string;
   uploadedImage?: File | null;
   writingTimeLeft?: number;
+  // Timer states for persistence
+  timeLeft?: number;
+  totalTimeLeft?: number;
+  viewingTimeLeft?: number;
+  // Flow control states
+  instructionsShown?: boolean;
+  isActive?: boolean;
+  isPaused?: boolean;
 }
 
 export const useTestPersistence = (testType: string, defaultState: TestState) => {

@@ -109,7 +109,20 @@ const PPDT = () => {
         if (images.length === 0) {
           await fetchImages();
         }
-        if (!isViewingPhase && !isWritingPhase && !isComplete && completedCount < practiceCount) {
+        
+        // Restore timer states
+        if (testState.viewingTimeLeft !== undefined) {
+          setViewingTimeLeft(testState.viewingTimeLeft);
+        }
+        if (testState.writingTimeLeft !== undefined) {
+          setWritingTimeLeft(testState.writingTimeLeft);
+        }
+        if (testState.isPaused !== undefined) {
+          setIsPaused(testState.isPaused);
+        }
+        
+        // Only show instructions if they haven't been shown yet
+        if (!testState.instructionsShown && !isViewingPhase && !isWritingPhase && !isComplete && completedCount < practiceCount) {
           setShowInstructions(true);
         }
       }
@@ -172,18 +185,26 @@ const PPDT = () => {
     
     if (isViewingPhase && viewingTimeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
-        setViewingTimeLeft(time => time - 1);
+        setViewingTimeLeft(time => {
+          const newTime = time - 1;
+          // Persist timer state
+          updateTestState({ viewingTimeLeft: newTime });
+          
+          if (newTime === 0) {
+            setIsViewingPhase(false);
+            setIsWritingPhase(true);
+            setWritingTimeLeft(240);
+            updateTestState({ writingTimeLeft: 240 });
+          }
+          return newTime;
+        });
       }, 1000);
-    } else if (isViewingPhase && viewingTimeLeft === 0) {
-      setIsViewingPhase(false);
-      setIsWritingPhase(true);
-      setWritingTimeLeft(240); // Reset writing timer
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isViewingPhase, viewingTimeLeft, isPaused]);
+  }, [isViewingPhase, viewingTimeLeft, isPaused, updateTestState]);
 
   // Fallback to show start button if timer stalls
   useEffect(() => {
@@ -334,6 +355,12 @@ const PPDT = () => {
     setShowInstructions(false);
     setIsViewingPhase(true);
     setViewingTimeLeft(30);
+    // Mark instructions as shown and persist state
+    updateTestState({ 
+      instructionsShown: true,
+      viewingTimeLeft: 30,
+      isPaused: false
+    });
   };
 
   const preventNavigation = (e: BeforeUnloadEvent) => {
@@ -523,15 +550,47 @@ const PPDT = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {isSupported && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleFullscreen}
-                    >
-                      {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </Button>
-                  )}
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={() => {
+                       if (isPaused) {
+                         setIsPaused(false);
+                         updateTestState({ isPaused: false });
+                         
+                         if (!testState.instructionsShown) {
+                           setShowInstructions(true);
+                         } else {
+                           // Resume directly to the appropriate phase
+                           if (testState.viewingTimeLeft && testState.viewingTimeLeft > 0) {
+                             setIsViewingPhase(true);
+                           } else if (testState.writingTimeLeft && testState.writingTimeLeft > 0) {
+                             setIsWritingPhase(true);
+                           }
+                         }
+                         
+                         if (isSupported && !isFullscreen) {
+                           enterFullscreen();
+                         }
+                         toast({
+                           title: 'Test Resumed',
+                           description: 'Your test has been resumed.',
+                         });
+                       } else {
+                         setIsPaused(true);
+                         setIsViewingPhase(false);
+                         setIsWritingPhase(false);
+                         updateTestState({ isPaused: true });
+                         toast({
+                           title: 'Test Paused',
+                           description: 'Test has been paused.',
+                         });
+                       }
+                     }}
+                     disabled={!testInProgress}
+                   >
+                     {isPaused ? 'Resume Test' : 'Pause Test'}
+                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -621,17 +680,30 @@ const PPDT = () => {
                 <p className="text-muted-foreground mb-4">
                   Test paused. Click to continue in fullscreen mode.
                 </p>
-                <Button variant="outline" onClick={async () => {
-                  setIsPaused(false);
-                  setShowInstructions(true);
-                  if (isSupported && !isFullscreen) {
-                    await enterFullscreen();
-                  }
-                  toast({
-                    title: 'Test Resumed',
-                    description: 'Your test has been resumed.',
-                  });
-                }}>
+                 <Button variant="outline" onClick={async () => {
+                   setIsPaused(false);
+                   updateTestState({ isPaused: false });
+                   
+                   // Only show instructions if they haven't been shown before
+                   if (!testState.instructionsShown) {
+                     setShowInstructions(true);
+                   } else {
+                     // Resume directly to the appropriate phase
+                     if (testState.viewingTimeLeft && testState.viewingTimeLeft > 0) {
+                       setIsViewingPhase(true);
+                     } else if (testState.writingTimeLeft && testState.writingTimeLeft > 0) {
+                       setIsWritingPhase(true);
+                     }
+                   }
+                   
+                   if (isSupported && !isFullscreen) {
+                     await enterFullscreen();
+                   }
+                   toast({
+                     title: 'Test Resumed',
+                     description: 'Your test has been resumed.',
+                   });
+                 }}>
                   Continue Test
                 </Button>
               </CardContent>
@@ -672,11 +744,12 @@ const PPDT = () => {
                     {/* Next Button during observation */}
                     <div className="flex justify-center mt-4">
                       <Button
-                        onClick={() => {
-                          setIsViewingPhase(false);
-                          setIsWritingPhase(true);
-                          setWritingTimeLeft(240);
-                        }}
+                       onClick={() => {
+                         setIsViewingPhase(false);
+                         setIsWritingPhase(true);
+                         setWritingTimeLeft(240);
+                         updateTestState({ viewingTimeLeft: 0, writingTimeLeft: 240 });
+                       }}
                         variant="outline"
                         size="sm"
                       >

@@ -81,7 +81,20 @@ const WAT = () => {
         await fetchWords();
       }
       const isComplete = completedCount >= practiceCount;
-      if (!isActive && !isComplete) {
+      
+      // Restore timer state
+      if (testState.timeLeft !== undefined) {
+        setTimeLeft(testState.timeLeft);
+      }
+      if (testState.isActive !== undefined) {
+        setIsActive(testState.isActive);
+      }
+      if (testState.isPaused !== undefined) {
+        setIsPaused(testState.isPaused);
+      }
+      
+      // Only show instructions if they haven't been shown yet
+      if (!testState.instructionsShown && !isComplete && !testState.isActive) {
         setShowInstructions(true);
       }
     };
@@ -144,18 +157,25 @@ const WAT = () => {
     if (isActive && timeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
         setTimeLeft((time) => {
+          const newTime = time <= 1 ? 15 : time - 1;
+          // Persist timer state
+          updateTestState({ 
+            timeLeft: newTime,
+            isActive: time <= 1 ? isActive : isActive,
+            isPaused 
+          });
+          
           if (time <= 1) {
             // Auto-skip when time runs out
             skipCurrentWord();
-            return 15;
           }
-          return time - 1;
+          return newTime;
         });
       }, 1000);
     }
 
     return () => clearInterval(interval);
-  }, [isActive, timeLeft, isPaused]);
+  }, [isActive, timeLeft, isPaused, updateTestState]);
 
   // Fullscreen exit handler - pause test
   useEffect(() => {
@@ -234,7 +254,17 @@ const WAT = () => {
 
   const resumeTest = async () => {
     setIsPaused(false);
-    setShowInstructions(true);
+    updateTestState({ isPaused: false });
+    
+    // Only show instructions if they haven't been shown before
+    if (!testState.instructionsShown) {
+      setShowInstructions(true);
+    } else {
+      // Resume directly without instructions
+      setIsActive(true);
+      updateTestState({ isActive: true });
+    }
+    
     if (isSupported && !isFullscreen) {
       await enterFullscreen();
     }
@@ -248,6 +278,13 @@ const WAT = () => {
     setShowInstructions(false);
     setIsActive(true);
     setTimeLeft(15);
+    // Mark instructions as shown and persist state
+    updateTestState({ 
+      instructionsShown: true,
+      isActive: true,
+      timeLeft: 15,
+      isPaused: false
+    });
   };
 
   const finishEarlyTest = async () => {
@@ -482,15 +519,26 @@ const WAT = () => {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  {isSupported && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => isFullscreen ? exitFullscreen() : enterFullscreen()}
-                    >
-                      {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </Button>
-                  )}
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={() => {
+                       if (isPaused) {
+                         resumeTest();
+                       } else {
+                         setIsPaused(true);
+                         setIsActive(false);
+                         updateTestState({ isPaused: true, isActive: false });
+                         toast({
+                           title: 'Test Paused',
+                           description: 'Test has been paused.',
+                         });
+                       }
+                     }}
+                     disabled={!testInProgress}
+                   >
+                     {isPaused ? 'Resume Test' : 'Pause Test'}
+                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
