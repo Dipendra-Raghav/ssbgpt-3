@@ -26,7 +26,7 @@ interface RoomDetails {
 }
 
 const RoomSession = () => {
-  const { id } = useParams<{ id: string }>();
+  const { roomId } = useParams<{ roomId: string }>();
   const [room, setRoom] = useState<RoomDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEnrolled, setIsEnrolled] = useState(false);
@@ -42,11 +42,11 @@ const RoomSession = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (id) {
+    if (roomId) {
       fetchRoomDetails();
       checkEnrollment();
     }
-  }, [id]);
+  }, [roomId]);
 
   useEffect(() => {
     if (room) {
@@ -77,7 +77,7 @@ const RoomSession = () => {
       const { data, error } = await supabase
         .from('rooms')
         .select('*')
-        .eq('id', id)
+        .eq('id', roomId)
         .single();
 
       if (error) throw error;
@@ -96,7 +96,7 @@ const RoomSession = () => {
       const { count } = await supabase
         .from('room_enrollments')
         .select('*', { count: 'exact', head: true })
-        .eq('room_id', id);
+        .eq('room_id', roomId);
 
       setRoom({
         ...data,
@@ -120,7 +120,7 @@ const RoomSession = () => {
       const { data, error } = await supabase
         .from('room_enrollments')
         .select('id')
-        .eq('room_id', id)
+        .eq('room_id', roomId)
         .eq('user_id', user?.id)
         .single();
 

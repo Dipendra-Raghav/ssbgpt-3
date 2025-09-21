@@ -119,7 +119,7 @@ const AppContent = () => {
                   <RoomJoin />
                 </ProtectedRoute>
               } />
-              <Route path="/rooms/session/:roomId" element={
+              <Route path="/rooms/:roomId/session" element={
                 <ProtectedRoute>
                   <RoomSession />
                 </ProtectedRoute>
