@@ -183,7 +183,7 @@ const WAT = () => {
           
           if (time <= 1) {
             // Auto-skip when time runs out
-            skipCurrentWord();
+            setTimeout(() => skipCurrentWord(), 100); // Small delay to ensure state is updated
           }
           return newTime;
         });
@@ -335,9 +335,44 @@ const WAT = () => {
   };
 
   const finishEarlyTest = async () => {
-    updateTestState({
-      completedCount: practiceCount  // Mark as complete
-    });
+    if (!user) return;
+    
+    try {
+      // Create empty response records for remaining words
+      const remainingWords = words.slice(responses.length);
+      const emptyResponses = [];
+      
+      for (const word of remainingWords) {
+        const { data: savedResponse, error } = await supabase
+          .from('test_responses')
+          .insert({
+            user_id: user.id,
+            test_type: 'wat',
+            response_text: null, // No response provided
+            image_id: word.id,
+            session_id: sessionId
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('Error saving empty response:', error);
+        } else {
+          emptyResponses.push(savedResponse);
+        }
+      }
+      
+      // Update responses to include the empty ones
+      const allResponses = [...responses, ...emptyResponses];
+      updateTestState({
+        completedCount: practiceCount,  // Mark as complete
+        responses: allResponses
+      });
+      
+    } catch (error) {
+      console.error('Error creating empty response records:', error);
+    }
+    
     setTestInProgress(false);
     setIsActive(false);
     setIsPaused(false);
@@ -350,28 +385,62 @@ const WAT = () => {
     
     toast({
       title: 'Test Finished Early',
-      description: `You completed ${completedCount} out of ${practiceCount} words.`,
+      description: `You completed ${responses.length} out of ${practiceCount} words. Remaining words marked as not attempted.`,
     });
   };
 
-  const skipCurrentWord = () => {
-    if (currentIndex < words.length - 1) {
-      updateTestState({
-        currentIndex: currentIndex + 1,
-        sentence: ''
-      });
-      setTimeLeft(15);
-    } else {
-      // Last word - finish test
-      updateTestState({
-        completedCount: practiceCount
-      });
-      setTestInProgress(false);
-      setIsActive(false);
-      setHasActiveSession(false);
+  const skipCurrentWord = async () => {
+    if (!user || !words[currentIndex]) return;
+
+    try {
+      // Save empty response for skipped word
+      const { data: savedResponse, error } = await supabase
+        .from('test_responses')
+        .insert({
+          user_id: user.id,
+          test_type: 'wat',
+          response_text: null, // No response provided (skipped)
+          image_id: words[currentIndex].id,
+          session_id: sessionId
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Track the response
+      const newResponses = [...responses, savedResponse];
+      const newCompletedCount = completedCount + 1;
+
+      if (newCompletedCount < practiceCount && currentIndex < words.length - 1) {
+        // Move to next word
+        updateTestState({
+          currentIndex: currentIndex + 1,
+          completedCount: newCompletedCount,
+          responses: newResponses,
+          sentence: ''
+        });
+        setTimeLeft(15);
+      } else {
+        // All words completed
+        updateTestState({
+          completedCount: newCompletedCount,
+          responses: newResponses
+        });
+        setTestInProgress(false);
+        setIsActive(false);
+        setHasActiveSession(false);
+        toast({
+          title: 'WAT Practice Complete!',
+          description: `You have completed all ${practiceCount} words.`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error saving skipped word:', error);
       toast({
-        title: 'WAT Practice Complete!',
-        description: `You have completed all ${practiceCount} words.`,
+        title: 'Error',
+        description: 'Failed to record skipped word. Please try again.',
+        variant: 'destructive',
       });
     }
   };

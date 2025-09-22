@@ -25,12 +25,18 @@ SSB style and constraints:
 - Negative words: convert with denial/remedial framing.  
 - Penalize: antisocial/negative tones, fact-free slogans, pure definitions, modal-heavy hypotheticals.  
 
+CRITICAL EVALUATION REQUIREMENTS:
+1. You MUST evaluate ALL words provided in the word list - every single word must have an individual analysis entry
+2. For any word where no response is found (either blank text or missing from image), mark as "No response provided" with score 0
+3. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
+4. When processing handwritten images, scan for all words in the list and explicitly note which responses are missing
+
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
 1. First extract text using OCR capabilities
-2. Handle numbered responses - match user's response to correct question number
-3. Accept that users may skip some items (blank responses)
-4. Evaluate extracted text using same criteria as typed responses
-5. If OCR quality is poor, note this in rationale but attempt evaluation
+2. Handle numbered responses - match user's response to correct question number  
+3. You MUST account for ALL words in the provided list, even if some responses are missing from the image
+4. For missing responses, create an individual_analysis entry with "No response provided" and score 0
+5. If OCR quality is poor, note this in rationale but attempt evaluation for visible responses
 
 JSON structure:
 {
@@ -59,12 +65,18 @@ Constraints:
 - Priorities: safeguard life, call help, use nearest resources, inform authorities, avoid heroics.  
 - Ethics: no illegal/vigilante actions.  
 
+CRITICAL EVALUATION REQUIREMENTS:
+1. You MUST evaluate ALL situations provided in the situation list - every single situation must have an individual analysis entry
+2. For any situation where no response is found (either blank text or missing from image), mark as "No response provided" with score 0  
+3. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
+4. When processing handwritten images, scan for all situations in the list and explicitly note which responses are missing
+
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
 1. First extract text using OCR capabilities
 2. Handle numbered responses - match user's response to correct question number
-3. Accept that users may skip some items (blank responses)
-4. Evaluate extracted text using same criteria as typed responses
-5. If OCR quality is poor, note this in rationale but attempt evaluation
+3. You MUST account for ALL situations in the provided list, even if some responses are missing from the image
+4. For missing responses, create an individual_analysis entry with "No response provided" and score 0
+5. If OCR quality is poor, note this in rationale but attempt evaluation for visible responses
 
 JSON structure:
 {
@@ -93,10 +105,14 @@ Constraints:
 - Brevity: 8–12 sentences, realistic details, avoid melodrama/clichés.  
 - Tone: constructive, ethical, service-oriented.  
 
+CRITICAL EVALUATION REQUIREMENTS:
+1. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
+2. If no story content is provided, mark as "No response provided" with score 0
+
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
 1. First extract text using OCR capabilities
 2. Handle numbered responses - match user's response to correct question number
-3. Accept that users may skip some items (blank responses)
+3. If no story content is found in text or image, create evaluation noting "No response provided"
 4. Evaluate extracted text using same criteria as typed responses
 5. If OCR quality is poor, note this in rationale but attempt evaluation
 
@@ -216,21 +232,27 @@ serve(async (req) => {
     if (testType === 'ppdt') {
       userContent = `Please evaluate this PPDT story response:
 
-Story: ${responses.map(r => r.response_text || 'No text response provided').join(' ')}
+Story: ${responses.map(r => r.response_text || 'No response provided').join(' ')}
+
+${responses.some(r => !r.response_text || !r.response_text.trim()) ? 'IMPORTANT: No story content was provided. Mark this as "No response provided" with score 0.' : ''}
 
 Provide evaluation focusing on leadership potential, creativity, problem-solving ability, and character portrayal.`;
     } else if (testType === 'srt') {
       userContent = `Please evaluate these SRT situation responses:
 
 ${responses.map((r, i) => `Situation ${i + 1}: ${testContent[r.image_id]?.situation_text || 'Unknown situation'}
-User Response: ${r.response_text || 'No text response provided'}`).join('\n\n')}
+User Response: ${r.response_text || 'No response provided'}`).join('\n\n')}
+
+IMPORTANT: You must provide individual analysis for ALL ${responses.length} situations listed above. For any situation where the user response shows "No response provided", mark it with score 0 and note "No response provided" in the analysis.
 
 Provide evaluation focusing on decision-making, leadership response, stakeholder consideration, and solution effectiveness.`;
     } else if (testType === 'wat') {
       userContent = `Please evaluate these WAT word association responses:
 
 ${responses.map((r, i) => `Word ${i + 1}: ${testContent[r.image_id]?.word || 'Unknown word'}
-User Response: ${r.response_text || 'No text response provided'}`).join('\n\n')}
+User Response: ${r.response_text || 'No response provided'}`).join('\n\n')}
+
+IMPORTANT: You must provide individual analysis for ALL ${responses.length} words listed above. For any word where the user response shows "No response provided", mark it with score 0 and note "No response provided" in the analysis.
 
 Provide evaluation focusing on psychological insights, word associations, sentence quality, and leadership indicators.`;
     } else {

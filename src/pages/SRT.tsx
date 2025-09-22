@@ -175,8 +175,8 @@ const SRT = () => {
           });
           
           if (newTime === 0) {
-            // Auto-finish when total time is up
-            finishEarlyTest();
+            // Auto-finish when total time is up - create empty records for remaining situations
+            handleTimeExpiry();
           }
           return newTime;
         });
@@ -320,9 +320,45 @@ const SRT = () => {
   };
 
   const finishEarlyTest = async () => {
-    updateTestState({
-      completedCount: practiceCount  // Mark as complete
-    });
+    if (!user) return;
+    
+    try {
+      // Create empty response records for remaining unattempted situations
+      const remainingSituations = situations.slice(responses.length);
+      const emptyResponses = [];
+      
+      for (const situation of remainingSituations) {
+        const { data: savedResponse, error } = await supabase
+          .from('test_responses')
+          .insert({
+            user_id: user.id,
+            test_type: 'srt',
+            response_text: null, // No response provided
+            image_id: situation.id,
+            session_id: sessionId,
+            time_taken: null
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('Error saving empty response:', error);
+        } else {
+          emptyResponses.push(savedResponse);
+        }
+      }
+      
+      // Update responses to include the empty ones
+      const allResponses = [...responses, ...emptyResponses];
+      updateTestState({
+        completedCount: practiceCount,  // Mark as complete
+        responses: allResponses
+      });
+      
+    } catch (error) {
+      console.error('Error creating empty response records:', error);
+    }
+    
     setTestInProgress(false);
     setIsActive(false);
     setIsPaused(false);
@@ -334,7 +370,62 @@ const SRT = () => {
     
     toast({
       title: 'Test Finished Early',
-      description: `You completed ${responses.length} out of ${practiceCount} situations.`,
+      description: `You completed ${responses.length} out of ${practiceCount} situations. Remaining situations marked as not attempted.`,
+    });
+  };
+
+  const handleTimeExpiry = async () => {
+    if (!user) return;
+    
+    try {
+      // Create empty response records for ALL remaining situations (including current)
+      const remainingSituations = situations.slice(completedCount);
+      const emptyResponses = [];
+      
+      for (const situation of remainingSituations) {
+        const { data: savedResponse, error } = await supabase
+          .from('test_responses')
+          .insert({
+            user_id: user.id,
+            test_type: 'srt', 
+            response_text: null, // No response provided due to timeout
+            image_id: situation.id,
+            session_id: sessionId,
+            time_taken: null
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('Error saving timeout response:', error);
+        } else {
+          emptyResponses.push(savedResponse);
+        }
+      }
+      
+      // Update responses to include the timeout ones
+      const allResponses = [...responses, ...emptyResponses];
+      updateTestState({
+        completedCount: practiceCount,  // Mark as complete
+        responses: allResponses
+      });
+      
+    } catch (error) {
+      console.error('Error creating timeout response records:', error);
+    }
+    
+    setTestInProgress(false);
+    setIsActive(false);
+    setIsPaused(false);
+    
+    // Exit fullscreen
+    if (isFullscreen && isSupported) {
+      await exitFullscreen();
+    }
+    
+    toast({
+      title: 'Time Expired',
+      description: `Time is up! You completed ${responses.length} out of ${practiceCount} situations. Remaining situations marked as not attempted.`,
     });
   };
 
