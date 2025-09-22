@@ -32,11 +32,13 @@ CRITICAL EVALUATION REQUIREMENTS:
 4. When processing handwritten images, scan for all words in the list and explicitly note which responses are missing
 
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. First extract text using OCR capabilities
-2. Handle numbered responses - match user's response to correct question number  
-3. You MUST account for ALL words in the provided list, even if some responses are missing from the image
-4. For missing responses, create an individual_analysis entry with "No response provided" and score 0
-5. If OCR quality is poor, note this in rationale but attempt evaluation for visible responses
+1. Responses will be numbered (1, 2, 3, etc.) - carefully match each numbered response to the corresponding word position
+2. First extract ALL text using OCR capabilities, scanning the entire image thoroughly
+3. Map numbered responses (1→Word 1, 2→Word 2, etc.) - handle variations like "1.", "1)", or just "1"
+4. You MUST evaluate ALL words in the provided list, even if some numbered responses are missing from the image
+5. For missing numbered responses, create an individual_analysis entry with "No response provided" and score 0
+6. If OCR quality is poor, note this in rationale but attempt evaluation for all visible numbered responses
+7. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
 
 JSON structure:
 {
@@ -72,11 +74,13 @@ CRITICAL EVALUATION REQUIREMENTS:
 4. When processing handwritten images, scan for all situations in the list and explicitly note which responses are missing
 
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. First extract text using OCR capabilities
-2. Handle numbered responses - match user's response to correct question number
-3. You MUST account for ALL situations in the provided list, even if some responses are missing from the image
-4. For missing responses, create an individual_analysis entry with "No response provided" and score 0
-5. If OCR quality is poor, note this in rationale but attempt evaluation for visible responses
+1. Responses will be numbered (1, 2, 3, etc.) - carefully match each numbered response to the corresponding situation position
+2. First extract ALL text using OCR capabilities, scanning the entire image thoroughly
+3. Map numbered responses (1→Situation 1, 2→Situation 2, etc.) - handle variations like "1.", "1)", or just "1"
+4. You MUST evaluate ALL situations in the provided list, even if some numbered responses are missing from the image
+5. For missing numbered responses, create an individual_analysis entry with "No response provided" and score 0
+6. If OCR quality is poor, note this in rationale but attempt evaluation for all visible numbered responses
+7. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
 
 JSON structure:
 {
@@ -110,11 +114,12 @@ CRITICAL EVALUATION REQUIREMENTS:
 2. If no story content is provided, mark as "No response provided" with score 0
 
 IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. First extract text using OCR capabilities
-2. Handle numbered responses - match user's response to correct question number
+1. Extract ALL text using OCR capabilities, scanning the entire image thoroughly
+2. Handle numbered responses if present - match user's response to correct question number
 3. If no story content is found in text or image, create evaluation noting "No response provided"
 4. Evaluate extracted text using same criteria as typed responses
-5. If OCR quality is poor, note this in rationale but attempt evaluation
+5. If OCR quality is poor, note this in rationale but attempt evaluation for all visible text
+6. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
 
 JSON structure:
 {
@@ -267,7 +272,15 @@ Provide evaluation focusing on psychological insights, word associations, senten
       // Add note about images for processing
       userContent += `
 
-Note: Images have been uploaded that may contain handwritten responses. Please analyze both typed responses and any handwritten content in the images for evaluation.`;
+Note: Images have been uploaded that may contain handwritten responses. 
+
+CRITICAL INSTRUCTIONS FOR HANDWRITTEN EVALUATION:
+- Responses are numbered (1, 2, 3, etc.) corresponding to the ${testType === 'wat' ? 'word' : 'situation'} order listed above
+- Scan the ENTIRE image thoroughly - handwriting may be faint, small, or in different areas
+- Match numbered responses precisely: 1→${testType === 'wat' ? 'Word' : 'Situation'} 1, 2→${testType === 'wat' ? 'Word' : 'Situation'} 2, etc.
+- Extract ALL visible numbered responses, even if handwriting is unclear
+- For any missing numbered response, explicitly mark as "No response provided" in your evaluation
+- Please analyze both typed responses and any handwritten content in the images for evaluation.`;
       
       // Include images in the message
       const content = [
