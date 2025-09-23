@@ -482,16 +482,6 @@ const WAT = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedImage(file);
-      toast({
-        title: 'Image Selected',
-        description: 'Image ready for upload with your response.',
-      });
-    }
-  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && sentence.trim()) {
@@ -758,26 +748,10 @@ const WAT = () => {
               <CardHeader>
                 <CardTitle>WAT Practice Complete!</CardTitle>
                 <CardDescription>
-                  You have successfully completed all {practiceCount} words. Upload an image if you have handwritten responses, then get your evaluation.
+                  You have successfully completed all {practiceCount} words. Click below to get your evaluation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Enhanced Image Upload Section */}
-                <div className="border-t pt-4">
-                  <TestImageUpload
-                    onFilesUploaded={(files) => {
-                      if (files.length > 0) {
-                        setUploadedImage(files[0]);
-                      }
-                    }}
-                    sessionId={sessionId}
-                    testType="wat"
-                    maxFiles={3}
-                    currentUploadedImage={uploadedImage}
-                    onImageChange={setUploadedImage}
-                  />
-                </div>
-
                 {evaluationError && (
                   <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-600">{evaluationError}</p>
@@ -801,70 +775,26 @@ const WAT = () => {
         console.log('Processing evaluation for:', { userId: user?.id, testType: 'wat', responseCount: responses.length });
         
         try {
-          let finalImageUrl = null;
-          
-          // Always check for any images first - prioritize session uploads for mobile
-          console.log('Image check:', { hasUploadedImage: !!uploadedImage, uploadedImageSize: uploadedImage?.size });
-          
-          // First check for all mobile uploads
-          const { data: mobileUploads, error: uploadError } = await supabase
-            .from('session_uploads')
-            .select('public_url')
-            .eq('session_id', sessionId)
-            .order('created_at', { ascending: false });
-            
-          let finalImageUrls: string[] = [];
-          
-          if (!uploadError && mobileUploads && mobileUploads.length > 0) {
-            finalImageUrls = mobileUploads.map(upload => upload.public_url);
-            console.log('Using mobile-uploaded image URLs:', finalImageUrls);
-          } else {
-            // Short re-check in case uploads are still processing
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const { data: recheckUploads } = await supabase
-              .from('session_uploads')
-              .select('public_url')
-              .eq('session_id', sessionId)
-              .order('created_at', { ascending: false });
-              
-            if (recheckUploads && recheckUploads.length > 0) {
-              finalImageUrls = recheckUploads.map(upload => upload.public_url);
-              console.log('Found images on re-check:', finalImageUrls);
-            }
-          }
-          
-          // If no mobile uploads, check for computer upload
-          if (finalImageUrls.length === 0 && uploadedImage && uploadedImage.size > 0) {
-            console.log('Uploading computer-selected image...');
-            const uploadedUrl = await uploadImage(uploadedImage);
-            if (uploadedUrl) {
-              finalImageUrls = [uploadedUrl];
-              console.log('Computer image uploaded:', finalImageUrls);
-            }
-          }
-
           // Check if we have any content to evaluate
           const hasTextResponses = responses.some(r => r.response_text && r.response_text.trim());
-          const hasImages = finalImageUrls.length > 0;
           
-          if (!hasTextResponses && !hasImages) {
+          if (!hasTextResponses) {
             toast({
               title: "No Content",
-              description: "Please provide either text responses or upload an image before evaluation.",
+              description: "Please provide text responses before evaluation.",
               variant: "destructive",
             });
             return;
           }
 
           const responseIds = responses.map(r => r.id);
-          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'wat', responseIds, finalImageUrls });
+          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'wat', responseIds });
           
           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
             body: {
               userId: user?.id,
               testType: 'wat',
-              responseIds,
-              finalImageUrls
+              responseIds
             }
           });
           
@@ -874,58 +804,48 @@ const WAT = () => {
             console.error('Supabase function error:', error);
             throw error;
           }
-                          
-                          // Clean up uploaded images
-                          try {
-                            await supabase.functions.invoke('delete-test-images', {
-                              body: { sessionId, testType: 'wat' }
-                            });
-                          } catch (cleanupError) {
-                            console.warn('Failed to cleanup images:', cleanupError);
-                          }
 
-                          toast({
-                            title: "Evaluation Complete!",
-                            description: "Your WAT test has been evaluated successfully.",
-                          });
-                          
-                          setTimeout(() => {
-                            window.location.href = '/results';
-                          }, 1500);
-                       } catch (error: any) {
-                         console.error('Evaluation error:', error);
-                         setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
-                         toast({
-                           title: "Error",
-                           description: error.message || "Failed to get evaluation. Please try again.",
-                           variant: "destructive",
-                         });
-                        } finally {
-                          setIsEvaluating(false);
-                        }
-                     }}
-                     className="shadow-command flex-1"
-                     disabled={isEvaluating}
-                   >
-                     <Send className="w-4 h-4 mr-2" />
-                     Submit Test & Get Evaluation
-                   </Button>
-                   <Button 
-                     variant="outline"
-                     onClick={() => {
-                       resetTestState();
-                       setShowCountSelector(true);
-                       setIsActive(false);
-                       setUploadedImage(null);
-                       setTimeLeft(15);
-                        setTestInProgress(false);
-                        setIsPaused(false);
-                        setHasActiveSession(false);
-                     }}
-                   >
-                     Practice Again
-                   </Button>
-                </div>
+          toast({
+            title: "Evaluation Complete!",
+            description: "Your WAT test has been evaluated successfully.",
+          });
+          
+          setTimeout(() => {
+            window.location.href = '/results';
+          }, 1500);
+       } catch (error: any) {
+         console.error('Evaluation error:', error);
+         setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
+         toast({
+           title: "Error",
+           description: error.message || "Failed to get evaluation. Please try again.",
+           variant: "destructive",
+         });
+        } finally {
+          setIsEvaluating(false);
+        }
+     }}
+                      className="shadow-command flex-1"
+                      disabled={isEvaluating}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Test & Get Evaluation
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        resetTestState();
+                        setShowCountSelector(true);
+                        setIsActive(false);
+                        setTimeLeft(15);
+                         setTestInProgress(false);
+                         setIsPaused(false);
+                         setHasActiveSession(false);
+                      }}
+                    >
+                      Practice Again
+                    </Button>
+                 </div>
               </CardContent>
             </Card>
           )}

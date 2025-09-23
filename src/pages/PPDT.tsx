@@ -463,7 +463,7 @@ const PPDT = () => {
     setIsViewingPhase(false);
     setIsWritingPhase(false);
     setIsComplete(false);
-    setUploadedImage(null);
+    
     setViewingTimeLeft(30);
     setWritingTimeLeft(240);
     setTestInProgress(false);
@@ -471,16 +471,6 @@ const PPDT = () => {
     setShowInstructions(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedImage(file);
-      toast({
-        title: 'Image Selected',
-        description: 'Image ready for upload with your response.',
-      });
-    }
-  };
 
   const currentImage = images[currentImageIndex];
   const viewingProgress = ((30 - viewingTimeLeft) / 30) * 100;
@@ -830,7 +820,7 @@ const PPDT = () => {
                   disabled={loading}
                   className="shadow-command"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
+                  <Send className="w-4 h-4 mr-2" />
                   {loading ? 'Moving to Next...' : 'Continue to Next Image'}
                 </Button>
               </CardContent>
@@ -843,27 +833,10 @@ const PPDT = () => {
               <CardHeader>
                 <CardTitle>PPDT Practice Complete!</CardTitle>
                 <CardDescription>
-                  You have successfully completed all {practiceCount} images. Upload an image if you have handwritten responses, then get your evaluation.
+                  You have successfully completed all {practiceCount} images. Click below to get your evaluation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Enhanced Image Upload Section */}
-                <div className="border-t pt-4">
-                  <TestImageUpload
-                    onFilesUploaded={(files) => {
-                      // For now, set the first file as the uploaded image for backward compatibility
-                      if (files.length > 0) {
-                        setUploadedImage(files[0]);
-                      }
-                    }}
-                    sessionId={sessionId}
-                    testType="ppdt"
-                    maxFiles={3}
-                    currentUploadedImage={uploadedImage}
-                    onImageChange={setUploadedImage}
-                  />
-                </div>
-
                 {evaluationError && (
                   <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-600">{evaluationError}</p>
@@ -886,89 +859,65 @@ const PPDT = () => {
                          
                            console.log('Processing evaluation for:', { userId: user?.id, testType: 'ppdt', responseCount: responses.length });
                            
-                           let finalImageUrl = null;
+                           // Check if we have any content to evaluate
+                           const hasTextResponses = responses.some(r => r.response_text && r.response_text.trim());
                            
-                           // Always check for any images first - prioritize session uploads for mobile
-                           console.log('Image check:', { hasUploadedImage: !!uploadedImage, uploadedImageSize: uploadedImage?.size });
-                           
-                           // First check for mobile uploads regardless of uploadedImage state
-                           const { data: mobileUploads, error: uploadError } = await supabase
-                             .from('session_uploads')
-                             .select('public_url')
-                             .eq('session_id', sessionId)
-                             .order('created_at', { ascending: false })
-                             .limit(1);
-                             
-                           if (!uploadError && mobileUploads && mobileUploads.length > 0) {
-                             finalImageUrl = mobileUploads[0].public_url;
-                             console.log('Using mobile-uploaded image URL:', finalImageUrl);
-                           } else if (uploadedImage && uploadedImage.size > 0) {
-                             // Only upload computer-selected file if no mobile uploads found
-                             console.log('Uploading computer-selected image...');
-                             finalImageUrl = await uploadImage(uploadedImage);
-                             console.log('Computer image uploaded:', finalImageUrl);
+                           if (!hasTextResponses) {
+                             toast({
+                               title: "No Content",
+                               description: "Please provide text responses before evaluation.",
+                               variant: "destructive",
+                             });
+                             return;
                            }
 
                           const responseIds = responses.map(r => r.id);
-                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'ppdt', responseIds, finalImageUrl });
+                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'ppdt', responseIds });
                           
                           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
                             body: { 
                               userId: user?.id, 
                               testType: 'ppdt', 
-                              responseIds,
-                              finalImageUrl
+                              responseIds
                             }
                           });
-                          
-                          console.log('Evaluation response:', { data, error });
-                          
-                          if (error) {
-                            console.error('Supabase function error:', error);
-                            throw error;
-                          }
-                         
-                          // Clean up uploaded images
-                          try {
-                            await supabase.functions.invoke('delete-test-images', {
-                              body: { sessionId, testType: 'ppdt' }
-                            });
-                          } catch (cleanupError) {
-                            console.warn('Failed to cleanup images:', cleanupError);
-                          }
+                           console.log('Evaluation response:', { data, error });
+                           
+                           if (error) {
+                             console.error('Supabase function error:', error);
+                             throw error;
+                           }
 
-                          // Show success message before redirecting
+                           toast({
+                             title: "Evaluation Complete!",
+                             description: "Your PPDT test has been evaluated successfully.",
+                           });
+                           
+                           setTimeout(() => {
+                             window.location.href = '/results';
+                           }, 1500);
+                        } catch (error: any) {
+                          console.error('Evaluation error:', error);
+                          setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
                           toast({
-                            title: "Evaluation Complete!",
-                            description: "Your PPDT test has been evaluated successfully.",
+                            title: "Error",
+                            description: error.message || "Failed to get evaluation. Please try again.",
+                            variant: "destructive",
                           });
-                          
-                          // Auto-redirect to results page after a short delay
-                          setTimeout(() => {
-                            window.location.href = '/results';
-                          }, 1500);
-                       } catch (error: any) {
-                         console.error('Evaluation error:', error);
-                         setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
-                         toast({ 
-                           title: "Error", 
-                           description: error.message || "Failed to get evaluation.", 
-                           variant: "destructive" 
-                         });
-                       } finally {
-                         setEvaluationLoading(false);
-                       }
-                     }}
-                     className="shadow-command flex-1"
-                     disabled={evaluationLoading}
-                   >
-                     <Send className="w-4 h-4 mr-2" />
-                     Submit Test & Get Evaluation
-                   </Button>
-                   <Button variant="outline" onClick={resetTest}>
-                     Practice Again
-                   </Button>
-                </div>
+                         } finally {
+                           setEvaluationLoading(false);
+                         }
+                      }}
+                      className="shadow-command flex-1"
+                      disabled={evaluationLoading}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Test & Get Evaluation
+                    </Button>
+                    <Button variant="outline" onClick={resetTest}>
+                      Practice Again
+                     </Button>
+                 </div>
               </CardContent>
             </Card>
           )}

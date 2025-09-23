@@ -478,7 +478,7 @@ const SRT = () => {
     resetTestState();
     setShowCountSelector(true);
     setIsActive(false);
-    setUploadedImage(null);
+    
     setTotalTimeLeft(0);
     setTestInProgress(false);
     setHasActiveSession(false);
@@ -500,16 +500,6 @@ const SRT = () => {
     });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedImage(file);
-      toast({
-        title: 'Image Selected',
-        description: 'Image ready for upload with your response.',
-      });
-    }
-  };
 
   const progressPercentage = practiceCount > 0 ? (responses.length / practiceCount) * 100 : 0;
   const currentSituation = situations[currentIndex];
@@ -796,26 +786,10 @@ const SRT = () => {
               <CardHeader>
                 <CardTitle>SRT Practice Complete!</CardTitle>
                 <CardDescription>
-                  You have successfully completed all {practiceCount} situations. Upload an image if you have handwritten responses, then get your evaluation.
+                  You have successfully completed all {practiceCount} situations. Click below to get your evaluation.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Enhanced Image Upload Section */}
-                <div className="border-t pt-4">
-                  <TestImageUpload
-                    onFilesUploaded={(files) => {
-                      if (files.length > 0) {
-                        setUploadedImage(files[0]);
-                      }
-                    }}
-                    sessionId={sessionId}
-                    testType="srt"
-                    maxFiles={3}
-                    currentUploadedImage={uploadedImage}
-                    onImageChange={setUploadedImage}
-                  />
-                </div>
-
                 {evaluationError && (
                   <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-600">{evaluationError}</p>
@@ -839,70 +813,26 @@ const SRT = () => {
                           
            console.log('Processing evaluation for:', { userId: user?.id, testType: 'srt', responseCount: responses.length });
            
-           let finalImageUrl = null;
+           // Check if we have any content to evaluate
+           const hasTextResponses = responses.some(r => r.response_text && r.response_text.trim());
            
-           // Always check for any images first - prioritize session uploads for mobile
-           console.log('Image check:', { hasUploadedImage: !!uploadedImage, uploadedImageSize: uploadedImage?.size });
-           
-            // First check for all mobile uploads
-            const { data: mobileUploads, error: uploadError } = await supabase
-              .from('session_uploads')
-              .select('public_url')
-              .eq('session_id', sessionId)
-              .order('created_at', { ascending: false });
-              
-            let finalImageUrls: string[] = [];
-            
-            if (!uploadError && mobileUploads && mobileUploads.length > 0) {
-              finalImageUrls = mobileUploads.map(upload => upload.public_url);
-              console.log('Using mobile-uploaded image URLs:', finalImageUrls);
-            } else {
-              // Short re-check in case uploads are still processing
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              const { data: recheckUploads } = await supabase
-                .from('session_uploads')
-                .select('public_url')
-                .eq('session_id', sessionId)
-                .order('created_at', { ascending: false });
-                
-              if (recheckUploads && recheckUploads.length > 0) {
-                finalImageUrls = recheckUploads.map(upload => upload.public_url);
-                console.log('Found images on re-check:', finalImageUrls);
-              }
-            }
-            
-            // If no mobile uploads, check for computer upload
-            if (finalImageUrls.length === 0 && uploadedImage && uploadedImage.size > 0) {
-              console.log('Uploading computer-selected image...');
-              const uploadedUrl = await uploadImage(uploadedImage);
-              if (uploadedUrl) {
-                finalImageUrls = [uploadedUrl];
-                console.log('Computer image uploaded:', finalImageUrls);
-              }
-            }
-
-                          // Check if we have any content to evaluate
-                          const hasTextResponses = responses.some(r => r.response_text && r.response_text.trim());
-                          const hasImages = finalImageUrls.length > 0;
-                          
-                          if (!hasTextResponses && !hasImages) {
-                            toast({
-                              title: "No Content",
-                              description: "Please provide either text responses or upload an image before evaluation.",
-                              variant: "destructive",
-                            });
-                            return;
-                          }
+           if (!hasTextResponses) {
+             toast({
+               title: "No Content",
+               description: "Please provide text responses before evaluation.",
+               variant: "destructive",
+             });
+             return;
+           }
 
                           const responseIds = responses.map(r => r.id);
-                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'srt', responseIds, finalImageUrls });
+                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'srt', responseIds });
                           
                           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
-                            body: {
-                              userId: user?.id,
-                              testType: 'srt',
-                              responseIds,
-                              finalImageUrls
+                            body: { 
+                              userId: user?.id, 
+                              testType: 'srt', 
+                              responseIds
                             }
                           });
                           
@@ -912,25 +842,16 @@ const SRT = () => {
                             console.error('Supabase function error:', error);
                             throw error;
                           }
-                          
-                           // Clean up uploaded images
-                           try {
-                             await supabase.functions.invoke('delete-test-images', {
-                               body: { sessionId, testType: 'srt' }
-                             });
-                           } catch (cleanupError) {
-                             console.warn('Failed to cleanup images:', cleanupError);
-                           }
 
-                           toast({
-                             title: "Evaluation Complete!",
-                             description: "Your SRT test has been evaluated successfully.",
-                           });
-                           
-                           setTimeout(() => {
-                             window.location.href = '/results';
-                           }, 1500);
-                        } catch (error: any) {
+                          toast({
+                            title: "Evaluation Complete!",
+                            description: "Your SRT test has been evaluated successfully.",
+                          });
+                          
+                          setTimeout(() => {
+                            window.location.href = '/results';
+                          }, 1500);
+                         } catch (error: any) {
                           console.error('Evaluation error:', error);
                           setEvaluationError(error.message || 'Failed to get evaluation. Please try again.');
                           toast({
@@ -938,8 +859,8 @@ const SRT = () => {
                             description: error.message || "Failed to get evaluation. Please try again.",
                             variant: "destructive",
                           });
-                          } finally {
-                            setEvaluationLoading(false);
+                         } finally {
+                           setEvaluationLoading(false);
                          }
                       }}
                       className="shadow-command flex-1"
@@ -948,12 +869,9 @@ const SRT = () => {
                       <Send className="w-4 h-4 mr-2" />
                       Submit Test & Get Evaluation
                     </Button>
-                   <Button 
-                     variant="outline"
-                     onClick={resetTest}
-                   >
-                     Practice Again
-                   </Button>
+                    <Button variant="outline" onClick={resetTest}>
+                      Practice Again
+                    </Button>
                  </div>
               </CardContent>
             </Card>
