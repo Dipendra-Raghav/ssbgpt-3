@@ -32,30 +32,21 @@ import {
 
 const AppSidebar = () => {
   const { user } = useAuth();
-  const location = useLocation();
-  const { state, toggleSidebar } = useSidebar();
+  const { state, setOpen } = useSidebar();
   const collapsed = state === "collapsed";
-
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-useEffect(() => {
-  function handleClickOutside(e: MouseEvent) {
-    const target = e.target as Node;
-
-    if (
-      sidebarRef.current &&
-      !sidebarRef.current.contains(target)
-    ) {
-      // Collapse only if open
-      if (!collapsed) {
-        toggleSidebar();
-      }
+  const handleMouseEnter = () => {
+    if (collapsed) {
+      setOpen(true);
     }
-  }
+  };
 
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, [collapsed, toggleSidebar]);
+  const handleMouseLeave = () => {
+    if (!collapsed) {
+      setOpen(false);
+    }
+  };
 
   const sections = [
     {
@@ -105,6 +96,8 @@ useEffect(() => {
       ref={sidebarRef}
       collapsible="icon"
       className="border-r border-sidebar-border"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Brand Section */}
       <SidebarHeader className="flex items-center justify-center px-3 py-3 border-b border-sidebar-border">
@@ -150,35 +143,35 @@ useEffect(() => {
         ))}
       </SidebarContent>
 
-{/* Footer */}
-<SidebarFooter className="border-t border-sidebar-border">
-  <div className="flex items-center justify-center gap-4 py-3">
-    <a
-      href="https://www.youtube.com/yourchannel"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-sidebar-foreground hover:text-red-500"
-    >
-      <Youtube className="w-5 h-5" />
-    </a>
-    <a
-      href="https://www.instagram.com/yourprofile"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-sidebar-foreground hover:text-pink-500"
-    >
-      <Instagram className="w-5 h-5" />
-    </a>
-    <a
-      href="https://www.linkedin.com/in/yourprofile"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-sidebar-foreground hover:text-blue-500"
-    >
-      <Linkedin className="w-5 h-5" />
-    </a>
-  </div>
-</SidebarFooter>
+      {/* Footer */}
+      <SidebarFooter className="border-t border-sidebar-border">
+        <div className="flex items-center justify-center gap-4 py-3">
+          <a
+            href="https://www.youtube.com/yourchannel"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sidebar-foreground hover:text-red-500"
+          >
+            <Youtube className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.instagram.com/yourprofile"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sidebar-foreground hover:text-pink-500"
+          >
+            <Instagram className="w-5 h-5" />
+          </a>
+          <a
+            href="https://www.linkedin.com/in/yourprofile"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sidebar-foreground hover:text-blue-500"
+          >
+            <Linkedin className="w-5 h-5" />
+          </a>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 };
