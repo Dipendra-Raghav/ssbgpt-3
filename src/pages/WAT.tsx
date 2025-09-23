@@ -10,8 +10,6 @@ import {
   Timer, 
   Send, 
   Play, 
-  Camera, 
-  FileImage, 
   SkipForward, 
   Square, 
   Maximize2, 
@@ -26,7 +24,6 @@ import { EvaluationLoading } from '@/components/ui/evaluation-loading';
 import { useCredits } from '@/hooks/useCredits';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CreditPopup } from '@/components/CreditPopup';
-import { TestImageUpload } from '@/components/TestImageUpload';
 
 interface WATWord {
   id: string;
@@ -42,7 +39,6 @@ const WAT = () => {
   const [timeLeft, setTimeLeft] = useState(15); // 15 seconds per word
   const [isActive, setIsActive] = useState(false);
   const [showCountSelector, setShowCountSelector] = useState(true);
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
@@ -139,32 +135,6 @@ const WAT = () => {
     }
   };
 
-  // Upload image to storage
-  const uploadImage = async (file: File) => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${sessionId}_${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('test-responses')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('test-responses')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (error: any) {
-      toast({
-        title: 'Upload Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
 
   // Timer effect with pause support
   useEffect(() => {
@@ -488,7 +458,6 @@ const WAT = () => {
           responses: newResponses,
           sentence: ''
         });
-        setUploadedImage(null);
         setTimeLeft(15);
       } else {
         // All words completed

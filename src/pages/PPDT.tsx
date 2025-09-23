@@ -9,10 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { 
   Image, 
   Timer, 
-  Upload, 
   Play, 
-  Camera, 
-  FileImage, 
   SkipForward, 
   Square,
   Minimize2, 
@@ -28,7 +25,6 @@ import { EvaluationLoading } from '@/components/ui/evaluation-loading';
 import { useCredits } from '@/hooks/useCredits';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CreditPopup } from '@/components/CreditPopup';
-import { TestImageUpload } from '@/components/TestImageUpload';
 
 interface PPDTImage {
   id: string;
@@ -52,7 +48,6 @@ const PPDT = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [showCountSelector, setShowCountSelector] = useState(true);
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [showViewingStartButton, setShowViewingStartButton] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [evaluationLoading, setEvaluationLoading] = useState(false);
@@ -200,32 +195,6 @@ const PPDT = () => {
     }
   };
 
-  // Upload image to storage
-  const uploadImage = async (file: File) => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${sessionId}_${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('test-responses')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('test-responses')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (error: any) {
-      toast({
-        title: 'Upload Error',
-        description: 'Failed to upload image. Please try again.',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
 
   // Viewing timer logic
   useEffect(() => {
@@ -430,18 +399,12 @@ const PPDT = () => {
 
     setLoading(true);
     try {
-      let imageUrl = null;
-      if (uploadedImage) {
-        imageUrl = await uploadImage(uploadedImage);
-      }
-
       const { data: savedResponse, error } = await supabase
         .from('test_responses')
         .insert({
           user_id: user.id,
           test_type: 'ppdt',
           response_text: story,
-          response_image_url: imageUrl,
           image_id: images[currentImageIndex].id,
           session_id: sessionId,
           time_taken: 240 - writingTimeLeft // Total time - remaining time
@@ -467,7 +430,6 @@ const PPDT = () => {
           responses: newResponses,
           story: ''
         });
-        setUploadedImage(null);
         setIsComplete(false);
         setIsViewingPhase(true);
         setViewingTimeLeft(30);

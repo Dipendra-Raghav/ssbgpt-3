@@ -38,11 +38,8 @@ interface Evaluation {
   score?: number;
   overall_score: number;
   analysis?: string;
-  improved_response?: string;
-  olq_scores: { [key: string]: number } | null;
   detailed_analysis: {
     rating: number;
-    improved_content: string;
     rationale: string;
     individual_analysis: Array<{
       word?: string;
@@ -50,12 +47,13 @@ interface Evaluation {
       user_response: string;
       score: number;
       analysis: string;
-      improved_response: string;
+      improved_response_1?: string;
+      improved_response_2?: string;
+      improved_response_3?: string;
+      improved_response?: string; // Legacy field
     }>;
     raw_evaluation: any;
   };
-  strengths: string[] | null;
-  improvements: string[] | null;
   created_at: string;
   session_id?: string;
 }
@@ -229,12 +227,38 @@ const Results = () => {
           <p className="text-sm text-destructive/90">{item.analysis}</p>
         </div>
 
-        <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-          <div className="flex items-center gap-2 mb-1">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-2">
             <Edit3 className="w-4 h-4 text-green-400" />
-            <span className="text-sm font-medium text-green-400">Improved Response:</span>
+            <span className="text-sm font-medium text-green-400">Improved Responses:</span>
           </div>
-          <p className="text-sm text-green-300">{item.improved_response}</p>
+          
+          {(item.improved_response_1 || item.improved_response) && (
+            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-green-400">Option 1:</span>
+              </div>
+              <p className="text-sm text-green-300">{item.improved_response_1 || item.improved_response}</p>
+            </div>
+          )}
+          
+          {item.improved_response_2 && (
+            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-green-400">Option 2:</span>
+              </div>
+              <p className="text-sm text-green-300">{item.improved_response_2}</p>
+            </div>
+          )}
+          
+          {item.improved_response_3 && (
+            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-green-400">Option 3:</span>
+              </div>
+              <p className="text-sm text-green-300">{item.improved_response_3}</p>
+            </div>
+          )}
         </div>
       </>
     )}
@@ -369,50 +393,13 @@ const Results = () => {
                                 <div className="p-4 bg-muted rounded-lg">
                                   <h4 className="font-semibold mb-2">Overall AI Feedback</h4>
                                   <p className="text-sm text-muted-foreground">
-                                    {evaluation.analysis || 'No analysis available for this evaluation.'}
+                                    {evaluation.analysis || evaluation.detailed_analysis?.rationale || 'No analysis available for this evaluation.'}
                                   </p>
                                 </div>
                               </TabsContent>
                               
                               <TabsContent value="detailed" className="space-y-4 mt-4">
-                                {evaluation.score && evaluation.score <= 3 ? (
-                                  <div className="space-y-4">
-                                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                                      <h4 className="font-semibold mb-2 text-red-800 flex items-center gap-2">
-                                        <AlertTriangle className="w-4 h-4" />
-                                        Areas for Improvement
-                                      </h4>
-                                      {evaluation.improvements && evaluation.improvements.length > 0 ? (
-                                        <ul className="text-sm text-red-700 space-y-2">
-                                          {evaluation.improvements.map((improvement, index) => (
-                                            <li key={index} className="flex items-start gap-2">
-                                              <span className="text-red-500">•</span>
-                                              {improvement}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      ) : (
-                                        <p className="text-sm text-red-700">No specific improvement areas identified.</p>
-                                      )}
-                                    </div>
-                                    
-                                    {evaluation.improved_response && (
-                                      <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                                        <h4 className="font-semibold mb-2 text-green-800 flex items-center gap-2">
-                                          <Star className="w-4 h-4" />
-                                          Improved Response
-                                        </h4>
-                                        <p className="text-sm text-green-700">{evaluation.improved_response}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-8 text-muted-foreground">
-                                    <Star className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                                    <p>Great job! This evaluation scored above 3/5.</p>
-                                    <p className="text-sm">Keep up the good work!</p>
-                                  </div>
-                                )}
+                                {renderIndividualAnalysis(evaluation)}
                               </TabsContent>
                             </Tabs>
                           </CardContent>

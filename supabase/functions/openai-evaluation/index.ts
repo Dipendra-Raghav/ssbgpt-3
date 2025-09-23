@@ -110,24 +110,16 @@ Constraints:
 - Tone: constructive, ethical, service-oriented.  
 
 CRITICAL EVALUATION REQUIREMENTS:
-1. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
+1. Generate THREE improved responses for ANY score below 5/5 (including scores of 4/5)
 2. If no story content is provided, mark as "No response provided" with score 0
-
-IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. Extract ALL text using OCR capabilities, scanning the entire image thoroughly
-2. Handle numbered responses if present - match user's response to correct question number
-3. If no story content is found in text or image, create evaluation noting "No response provided"
-4. Evaluate extracted text using same criteria as typed responses
-5. If OCR quality is poor, note this in rationale but attempt evaluation for all visible text
-6. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
 
 JSON structure:
 {
   "overall_rating": [number 1-5],
-  "pros": ["positive aspect 1", "positive aspect 2", "positive aspect 3"],
-  "cons": ["area for improvement 1", "area for improvement 2", "area for improvement 3"],
-  "improved_story": "Concise realistic story showing OLQs via actions and teamwork",
-  "rationale": "Explanation of OLQs demonstrated, realism, structure, and clarity"
+  "rationale": "Explanation of OLQs demonstrated, realism, structure, and clarity",
+  "improved_story_1": "Concise realistic story showing OLQs via actions and teamwork",
+  "improved_story_2": "Concise realistic story showing OLQs via actions and teamwork", 
+  "improved_story_3": "Concise realistic story showing OLQs via actions and teamwork"
 }`
 };
 
@@ -264,62 +256,11 @@ Provide evaluation focusing on psychological insights, word associations, senten
       throw new Error(`Unsupported test type: ${testType}. Supported types are: ppdt, srt, wat`);
     }
 
-    // Check if any responses have images or if there are uploaded images
-    const responseImages = responses.filter(r => r.response_image_url).length > 0;
-    const hasAnyImages = responseImages || hasImages;
-    
-    if (hasAnyImages) {
-      // Add note about images for processing
-      userContent += `
-
-Note: Images have been uploaded that may contain handwritten responses. 
-
-CRITICAL INSTRUCTIONS FOR HANDWRITTEN EVALUATION:
-- Responses are numbered (1, 2, 3, etc.) corresponding to the ${testType === 'wat' ? 'word' : 'situation'} order listed above
-- Scan the ENTIRE image thoroughly - handwriting may be faint, small, or in different areas
-- Match numbered responses precisely: 1→${testType === 'wat' ? 'Word' : 'Situation'} 1, 2→${testType === 'wat' ? 'Word' : 'Situation'} 2, etc.
-- Extract ALL visible numbered responses, even if handwriting is unclear
-- For any missing numbered response, explicitly mark as "No response provided" in your evaluation
-- Please analyze both typed responses and any handwritten content in the images for evaluation.`;
-      
-      // Include images in the message
-      const content = [
-        { type: 'text', text: userContent }
-      ];
-      
-      // Add individual response images to content
-      responses.forEach((response, index) => {
-        if (response.response_image_url) {
-          content.push({
-            type: 'image_url',
-            image_url: {
-              url: response.response_image_url
-            }
-          });
-        }
-      });
-      
-      // Add all uploaded images
-      imageUrls.forEach(url => {
-        content.push({
-          type: 'image_url',
-          image_url: {
-            url: url
-          }
-        });
-      });
-      
-      messages.push({
-        role: 'user',
-        content: content
-      });
-    } else {
-      // Text-only message
-      messages.push({
-        role: 'user',
-        content: userContent
-      });
-    }
+    // All evaluations are text-only now
+    messages.push({
+      role: 'user',
+      content: userContent
+    });
 
     console.log('Sending evaluation request to OpenAI with messages:', JSON.stringify(messages, null, 2));
 
@@ -421,35 +362,17 @@ CRITICAL INSTRUCTIONS FOR HANDWRITTEN EVALUATION:
     // Calculate overall score (convert 1-5 to 0-100 scale)
     const overallScore = Math.round((evaluation.overall_rating / 5) * 100);
 
-    // Prepare OLQ scores (legacy field for backward compatibility)
-    const olqScores = {
-      'Leadership & Initiative': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Decision-Making & Judgement': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Planning & Foresight': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Responsibility & Duty': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Mental Robustness / Emotional Stability': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Social Adaptability & Teamwork': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Power of Expression': Math.max(1, Math.min(5, evaluation.overall_rating)),
-      'Integrity & Ethics': Math.max(1, Math.min(5, evaluation.overall_rating))
-    };
-
-    // Save evaluation to database
+    // Save evaluation to database - only keep essential fields
     const { data: savedEvaluation, error: saveError } = await supabase
       .from('evaluations')
       .insert({
         user_id: userId,
         test_type: testType,
-        score: evaluation.overall_rating, // Use the new score field (1-5 scale)
-        overall_score: overallScore, // Use the new overall_score field (0-100 scale)
-        analysis: evaluation.rationale, // Use the new analysis field
-        improved_response: evaluation.improved_story || evaluation.improved_response || evaluation.improved_responses, // Use the new improved_response field
-        // Legacy fields for backward compatibility
-        olq_scores: olqScores,
-        strengths: evaluation.pros || [],
-        improvements: evaluation.cons || [],
+        score: evaluation.overall_rating,
+        overall_score: overallScore,
+        analysis: evaluation.rationale,
         detailed_analysis: {
           rating: evaluation.overall_rating,
-          improved_content: evaluation.improved_story || evaluation.improved_response || evaluation.improved_responses,
           rationale: evaluation.rationale,
           individual_analysis: evaluation.individual_analysis || [],
           raw_evaluation: evaluation

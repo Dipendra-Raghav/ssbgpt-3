@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Target, Timer, Send, Play, Camera, FileImage, SkipForward, Square, Minimize2, Maximize2 } from 'lucide-react';
+import { Target, Timer, Send, Play, SkipForward, Square, Minimize2, Maximize2 } from 'lucide-react';
 import { supabaseClient as supabase } from '@/lib/supabase-client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -16,7 +16,6 @@ import { EvaluationLoading } from '@/components/ui/evaluation-loading';
 import { useCredits } from '@/hooks/useCredits';
 import { useSubscription } from '@/hooks/useSubscription';
 import { CreditPopup } from '@/components/CreditPopup';
-import { TestImageUpload } from '@/components/TestImageUpload';
 
 interface SRTSituation {
   id: string;
@@ -33,7 +32,6 @@ const SRT = () => {
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCountSelector, setShowCountSelector] = useState(true);
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [testInProgress, setTestInProgress] = useState(false);
   const [showCreditPopup, setShowCreditPopup] = useState(false);
@@ -132,32 +130,6 @@ const SRT = () => {
     }
   };
 
-  // Upload image to storage
-  const uploadImage = async (file: File) => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}/${sessionId}_${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('test-responses')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('test-responses')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
-    } catch (error: any) {
-      toast({
-        title: 'Upload Error',
-        description: 'Failed to upload image. Please try again.',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  };
 
   // Timer logic - Total test time (15 seconds per situation)
   useEffect(() => {
@@ -478,7 +450,6 @@ const SRT = () => {
            responses: newResponses,
            response: ''
          });
-         setUploadedImage(null);
       } else {
         // All situations completed
         updateTestState({
