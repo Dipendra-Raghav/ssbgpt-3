@@ -27,25 +27,12 @@ SSB style and constraints:
 
 CRITICAL EVALUATION REQUIREMENTS:
 1. You MUST evaluate ALL words provided in the word list - every single word must have an individual analysis entry
-2. For any word where no response is found (either blank text or missing from image), mark as "No response provided" with score 0
-3. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
-4. When processing handwritten images, scan for all words in the list and explicitly note which responses are missing
-
-IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. Responses will be numbered (1, 2, 3, etc.) - carefully match each numbered response to the corresponding word position
-2. First extract ALL text using OCR capabilities, scanning the entire image thoroughly
-3. Map numbered responses (1→Word 1, 2→Word 2, etc.) - handle variations like "1.", "1)", or just "1"
-4. You MUST evaluate ALL words in the provided list, even if some numbered responses are missing from the image
-5. For missing numbered responses, create an individual_analysis entry with "No response provided" and score 0
-6. If OCR quality is poor, note this in rationale but attempt evaluation for all visible numbered responses
-7. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
+2. For any word where no response is found, mark as "No response provided" with score 0
+3. Generate THREE improved responses for ANY score below 5/5 (including scores of 4/5)
 
 JSON structure:
 {
   "overall_rating": [number 1-5],
-  "pros": ["positive aspect 1", "positive aspect 2", "positive aspect 3"],
-  "cons": ["area for improvement 1", "area for improvement 2", "area for improvement 3"],
-  "improved_responses": ["improved response 1", "improved response 2", "improved response 3"],
   "rationale": "Concise rationale linking decisions to OLQs and WAT constraints",
   "individual_analysis": [
     {
@@ -53,7 +40,9 @@ JSON structure:
       "user_response": "exact response user gave ('' if blank)",
       "score": [number 1-5],
       "analysis": "Specific critique tied to OLQs, brevity, practical framing",
-      "improved_response": "6–12 words, officer-like, practical, remedial if negative"
+      "improved_response_1": "6–12 words, officer-like, practical, remedial if negative",
+      "improved_response_2": "6–12 words, officer-like, practical, remedial if negative",
+      "improved_response_3": "6–12 words, officer-like, practical, remedial if negative"
     }
   ]
 }`,
@@ -69,25 +58,12 @@ Constraints:
 
 CRITICAL EVALUATION REQUIREMENTS:
 1. You MUST evaluate ALL situations provided in the situation list - every single situation must have an individual analysis entry
-2. For any situation where no response is found (either blank text or missing from image), mark as "No response provided" with score 0  
-3. Generate improved responses for ANY score below 5/5 (including scores of 4/5)
-4. When processing handwritten images, scan for all situations in the list and explicitly note which responses are missing
-
-IMPORTANT: Candidates may upload handwritten responses as images. When processing images:
-1. Responses will be numbered (1, 2, 3, etc.) - carefully match each numbered response to the corresponding situation position
-2. First extract ALL text using OCR capabilities, scanning the entire image thoroughly
-3. Map numbered responses (1→Situation 1, 2→Situation 2, etc.) - handle variations like "1.", "1)", or just "1"
-4. You MUST evaluate ALL situations in the provided list, even if some numbered responses are missing from the image
-5. For missing numbered responses, create an individual_analysis entry with "No response provided" and score 0
-6. If OCR quality is poor, note this in rationale but attempt evaluation for all visible numbered responses
-7. Scan carefully as handwriting may be anywhere in the image - don't miss faint or small text
+2. For any situation where no response is found, mark as "No response provided" with score 0  
+3. Generate THREE improved responses for ANY score below 5/5 (including scores of 4/5)
 
 JSON structure:
 {
   "overall_rating": [number 1-5],
-  "pros": ["positive aspect 1", "positive aspect 2", "positive aspect 3"],
-  "cons": ["area for improvement 1", "area for improvement 2", "area for improvement 3"],
-  "improved_response": "One concise telegraphic response (10–20 words)",
   "rationale": "Brief justification tied to decision-making, safety, ethics, OLQs",
   "individual_analysis": [
     {
@@ -95,7 +71,9 @@ JSON structure:
       "user_response": "exact response user gave ('' if blank)",
       "score": [number 1-5],
       "analysis": "Critique on feasibility, safety, legality, resourcefulness, OLQs",
-      "improved_response": "10–20 words, practical, lawful, safe, resource-aware"
+      "improved_response_1": "10–20 words, practical, lawful, safe, resource-aware",
+      "improved_response_2": "10–20 words, practical, lawful, safe, resource-aware",
+      "improved_response_3": "10–20 words, practical, lawful, safe, resource-aware"
     }
   ]
 }`,
@@ -130,91 +108,84 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { userId, testType, responseIds, finalImageUrl, finalImageUrls } = await req.json();
+    const { userId, testType, responseIds } = await req.json();
 
     console.log('Processing OpenAI evaluation for user:', userId, 'test:', testType);
 
-    // Validate required parameters (allow image-only flow if images are provided)
-    const hasResponseIds = Array.isArray(responseIds) && responseIds.length > 0;
-    const imageUrls = finalImageUrls || (finalImageUrl ? [finalImageUrl] : []);
-    const hasImages = imageUrls.length > 0;
-    
-    if (!userId || !testType || (!hasResponseIds && !hasImages)) {
+    // Validate required parameters
+    if (!userId || !testType || !Array.isArray(responseIds) || responseIds.length === 0) {
       console.error('Missing required parameters:', { userId, testType, responseIds });
-      throw new Error('Missing required parameters: provide responseIds or finalImageUrl/finalImageUrls');
+      throw new Error('Missing required parameters: userId, testType, and responseIds are required');
     }
 
-    console.log('Validated parameters:', { userId, testType, responseIds: Array.isArray(responseIds) ? responseIds.length : 0, imageUrls: imageUrls.length });
+    console.log('Validated parameters:', { userId, testType, responseIds: responseIds.length });
 
-    // Fetch test responses with their associated words/situations (optional)
+    // Fetch test responses with their associated words/situations
     let responses: any[] = [];
     let testContent: { [key: string]: any } = {};
     
-    if (hasResponseIds) {
-      const { data: respData, error: responsesError } = await supabase
-        .from('test_responses')
-        .select('*')
-        .in('id', responseIds)
-        .eq('user_id', userId)
-        .eq('test_type', testType);
+    const { data: respData, error: responsesError } = await supabase
+      .from('test_responses')
+      .select('*')
+      .in('id', responseIds)
+      .eq('user_id', userId)
+      .eq('test_type', testType);
 
-      if (responsesError) {
-        console.error('Error fetching test responses:', responsesError);
-        throw new Error(`Database error: ${responsesError.message}`);
-      }
+    if (responsesError) {
+      console.error('Error fetching test responses:', responsesError);
+      throw new Error(`Database error: ${responsesError.message}`);
+    }
 
-      if (!respData || respData.length === 0) {
-        console.warn('No test responses found for the specified criteria');
-      } else {
-        responses = respData;
-      }
+    if (!respData || respData.length === 0) {
+      console.warn('No test responses found for the specified criteria');
+      throw new Error('No test responses found for the specified criteria');
+    }
 
-      // Fetch associated test content separately to avoid relationship issues
-      if (testType === 'wat') {
-        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
-        if (imageIds.length > 0) {
-          const { data: words, error: wordsError } = await supabase
-            .from('wat_words')
-            .select('id, word')
-            .in('id', imageIds);
-          
-          if (!wordsError && words) {
-            words.forEach((word: any) => {
-              testContent[word.id] = { word: word.word };
-            });
-          }
-        }
-      } else if (testType === 'srt') {
-        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
-        if (imageIds.length > 0) {
-          const { data: situations, error: situationsError } = await supabase
-            .from('srt_situations')
-            .select('id, situation_text')
-            .in('id', imageIds);
-          
-          if (!situationsError && situations) {
-            situations.forEach((situation: any) => {
-              testContent[situation.id] = { situation_text: situation.situation_text };
-            });
-          }
-        }
-      } else if (testType === 'ppdt') {
-        const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
-        if (imageIds.length > 0) {
-          const { data: images, error: imagesError } = await supabase
-            .from('ppdt_images')
-            .select('id, description')
-            .in('id', imageIds);
-          
-          if (!imagesError && images) {
-            images.forEach((image: any) => {
-              testContent[image.id] = { description: image.description };
-            });
-          }
+    responses = respData;
+
+    // Fetch associated test content separately to avoid relationship issues
+    if (testType === 'wat') {
+      const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+      if (imageIds.length > 0) {
+        const { data: words, error: wordsError } = await supabase
+          .from('wat_words')
+          .select('id, word')
+          .in('id', imageIds);
+        
+        if (!wordsError && words) {
+          words.forEach((word: any) => {
+            testContent[word.id] = { word: word.word };
+          });
         }
       }
-    } else {
-      console.log('Proceeding with image-only evaluation (no responseIds provided).');
+    } else if (testType === 'srt') {
+      const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+      if (imageIds.length > 0) {
+        const { data: situations, error: situationsError } = await supabase
+          .from('srt_situations')
+          .select('id, situation_text')
+          .in('id', imageIds);
+        
+        if (!situationsError && situations) {
+          situations.forEach((situation: any) => {
+            testContent[situation.id] = { situation_text: situation.situation_text };
+          });
+        }
+      }
+    } else if (testType === 'ppdt') {
+      const imageIds = responses.map(r => r.image_id).filter((id: any) => id);
+      if (imageIds.length > 0) {
+        const { data: images, error: imagesError } = await supabase
+          .from('ppdt_images')
+          .select('id, description')
+          .in('id', imageIds);
+        
+        if (!imagesError && images) {
+          images.forEach((image: any) => {
+            testContent[image.id] = { description: image.description };
+          });
+        }
+      }
     }
 
     // Prepare evaluation content based on test type
@@ -256,7 +227,6 @@ Provide evaluation focusing on psychological insights, word associations, senten
       throw new Error(`Unsupported test type: ${testType}. Supported types are: ppdt, srt, wat`);
     }
 
-    // All evaluations are text-only now
     messages.push({
       role: 'user',
       content: userContent
@@ -401,13 +371,12 @@ Provide evaluation focusing on psychological insights, word associations, senten
     );
 
   } catch (error: any) {
-    console.error('Error processing evaluation:', error);
-    
+    console.error('Error in openai-evaluation function:', error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Unknown error occurred',
-        message: 'Failed to process evaluation'
+        error: error.message || 'Internal server error',
+        message: 'Evaluation failed'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

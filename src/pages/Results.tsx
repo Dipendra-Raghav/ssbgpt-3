@@ -217,7 +217,7 @@ const Results = () => {
       <p className="text-sm text-muted-foreground">{item.user_response}</p>
     </div>
 
-    {item.score <= 3 && (
+    {item.score <= 4 && (
       <>
         <div className="p-3 rounded border bg-destructive/10 border-destructive/30">
           <div className="flex items-center gap-2 mb-1">
@@ -263,7 +263,7 @@ const Results = () => {
       </>
     )}
 
-    {item.score > 3 && (
+    {item.score > 4 && (
       <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
         <div className="flex items-center gap-2 mb-1">
           <Star className="w-4 h-4 text-green-400" />
@@ -377,9 +377,9 @@ const Results = () => {
 </div>
 <div className="text-center p-4 bg-card border border-border rounded-lg">
   <div className="text-2xl font-bold text-destructive">
-    {evaluation.score && evaluation.score <= 3 ? '1' : '0'}
+    {evaluation.score && evaluation.score <= 4 ? '1' : '0'}
   </div>
-  <div className="text-sm text-muted-foreground">Responses ≤3</div>
+  <div className="text-sm text-muted-foreground">Responses ≤4</div>
 </div>
 <div className="text-center p-4 bg-card border border-border rounded-lg">
   <div className="text-2xl font-bold text-green-500">
@@ -471,9 +471,9 @@ const Results = () => {
 </div>
 <div className="text-center p-4 bg-card border border-border rounded-lg">
   <div className="text-2xl font-bold text-destructive">
-    {evaluation.score && evaluation.score <= 3 ? '1' : '0'}
+    {evaluation.score && evaluation.score <= 4 ? '1' : '0'}
   </div>
-  <div className="text-sm text-muted-foreground">Responses ≤3</div>
+  <div className="text-sm text-muted-foreground">Responses ≤4</div>
 </div>
 <div className="text-center p-4 bg-card border border-border rounded-lg">
   <div className="text-2xl font-bold text-green-500">
@@ -567,7 +567,7 @@ const Results = () => {
   <div className="text-2xl font-bold text-destructive">
     {evaluation.score && evaluation.score <= 3 ? '1' : '0'}
   </div>
-  <div className="text-sm text-muted-foreground">Responses ≤3</div>
+  <div className="text-sm text-muted-foreground">Responses ≤4</div>
 </div>
 <div className="text-center p-4 bg-card border border-border rounded-lg">
   <div className="text-2xl font-bold text-green-500">
