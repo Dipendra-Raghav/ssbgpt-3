@@ -139,27 +139,19 @@ const WAT = () => {
   // Timer effect with pause support
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
     if (isActive && timeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
         setTimeLeft((time) => {
-          const newTime = time <= 1 ? 15 : time - 1;
-          // Persist timer state
-          updateTestState({ 
-            timeLeft: newTime,
-            isActive: time <= 1 ? isActive : isActive,
-            isPaused 
-          });
-          
-          if (time <= 1) {
-            // Auto-skip when time runs out
-            setTimeout(() => skipCurrentWord(), 100); // Small delay to ensure state is updated
+          const newTime = time - 1;
+          updateTestState({ timeLeft: newTime });
+          if (newTime === 0) {
+            // Timer expired, save current input
+            handleNextWord(true); // true = auto-submit
           }
           return newTime;
         });
       }, 1000);
     }
-
     return () => clearInterval(interval);
   }, [isActive, timeLeft, isPaused]);
 
@@ -427,8 +419,17 @@ const WAT = () => {
     return () => window.removeEventListener('beforeunload', preventNavigation);
   }, [testInProgress]);
 
-  const handleNextWord = async () => {
+  const handleNextWord = async (isAutoSubmit = false) => {
     if (!user || !words[currentIndex]) return;
+
+    // Use the current state of 'sentence' from testState
+    const currentSentence = testState.sentence || '';
+
+    // If auto-submitting and there is no text, treat as skip
+    if (isAutoSubmit && !currentSentence.trim()) {
+      await skipCurrentWord();
+      return;
+    }
 
     try {
       // Save current response
@@ -437,7 +438,7 @@ const WAT = () => {
         .insert({
           user_id: user.id,
           test_type: 'wat',
-          response_text: sentence,
+          response_text: currentSentence,
           image_id: words[currentIndex].id,
           session_id: sessionId
         })
@@ -445,7 +446,7 @@ const WAT = () => {
         .single();
 
       if (error) throw error;
-      
+
       // Track the response
       const newResponses = [...responses, savedResponse];
       const newCompletedCount = completedCount + 1;
@@ -676,7 +677,7 @@ const WAT = () => {
                   
                   <div className="space-y-2">
                     <h4 className="font-semibold text-primary">Platform Options:</h4>
-                    <p className="text-sm">On this platform, you can either:</p>
+                    <p className="text-sm">On this platform, you can Type each response</p>
                     <ul className="list-disc list-inside space-y-1 text-sm">
                       <li><strong>Type each response</strong>, OR</li>
                       <li><strong>Click Next and upload handwritten answers</strong> at the end</li>
@@ -730,7 +731,7 @@ const WAT = () => {
                     Words: {sentence.split(' ').filter(word => word.length > 0).length}
                   </p>
                     <Button 
-                      onClick={handleNextWord}
+                      onClick={() => handleNextWord()}
                       disabled={loading}
                       className="shadow-command"
                     >

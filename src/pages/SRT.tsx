@@ -134,27 +134,19 @@ const SRT = () => {
   // Timer logic - Total test time (15 seconds per situation)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
     if (isActive && totalTimeLeft > 0 && !isPaused) {
       interval = setInterval(() => {
         setTotalTimeLeft(time => {
           const newTime = time - 1;
-          // Persist timer state
-          updateTestState({ 
-            totalTimeLeft: newTime,
-            isActive: newTime > 0 ? isActive : false,
-            isPaused 
-          });
-          
+          updateTestState({ totalTimeLeft: newTime });
           if (newTime === 0) {
-            // Auto-finish when total time is up - create empty records for remaining situations
+            // Time expired, save the current response and then finish
             handleTimeExpiry();
           }
           return newTime;
         });
       }, 1000);
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -347,58 +339,61 @@ const SRT = () => {
   };
 
   const handleTimeExpiry = async () => {
-    if (!user) return;
-    
+  if (!user) return;
+  // Save the current user response for the current SRT
+  let newResponses = [...responses];
+  if (situations[currentIndex]) {
     try {
-      // Create empty response records for ALL remaining situations (including current)
-      const remainingSituations = situations.slice(completedCount);
-      const emptyResponses = [];
-      
-      for (const situation of remainingSituations) {
-        const { data: savedResponse, error } = await supabase
-          .from('test_responses')
-          .insert({
-            user_id: user.id,
-            test_type: 'srt', 
-            response_text: null, // No response provided due to timeout
-            image_id: situation.id,
-            session_id: sessionId,
-            time_taken: null
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          console.error('Error saving timeout response:', error);
-        } else {
-          emptyResponses.push(savedResponse);
-        }
+      const { data: savedResponse, error } = await supabase
+        .from('test_responses')
+        .insert({
+          user_id: user.id,
+          test_type: 'srt',
+          response_text: testState.response.trim() || null,
+          image_id: situations[currentIndex].id,
+          session_id: sessionId,
+          time_taken: Math.max(0, (practiceCount * 15) - totalTimeLeft)
+        })
+        .select()
+        .single();
+      if (!error && savedResponse) {
+        newResponses = [...newResponses, savedResponse];
       }
-      
-      // Update responses to include the timeout ones
-      const allResponses = [...responses, ...emptyResponses];
-      updateTestState({
-        completedCount: practiceCount,  // Mark as complete
-        responses: allResponses
-      });
-      
-    } catch (error) {
-      console.error('Error creating timeout response records:', error);
+    } catch (err) {
+      // Optionally handle error
     }
-    
-    setTestInProgress(false);
-    setIsActive(false);
-    setIsPaused(false);
-    
-    // Exit fullscreen
-    if (isFullscreen && isSupported) {
-      await exitFullscreen();
+  }
+
+  // Save empty responses for all remaining situations
+  const remainingSituations = situations.slice(currentIndex + 1);
+  for (const situation of remainingSituations) {
+    try {
+      const { data: savedResponse, error } = await supabase
+        .from('test_responses')
+        .insert({
+          user_id: user.id,
+          test_type: 'srt',
+          response_text: null, // No response provided
+          image_id: situation.id,
+          session_id: sessionId,
+          time_taken: null
+        })
+        .select()
+        .single();
+      if (!error && savedResponse) {
+        newResponses = [...newResponses, savedResponse];
+      }
+    } catch (err) {
+      // Optionally handle error
     }
-    
-    toast({
-      title: 'Time Expired',
-      description: `Time is up! You completed ${responses.length} out of ${practiceCount} situations. Remaining situations marked as not attempted.`,
-    });
+  }
+
+  setTestInProgress(false);
+  setIsActive(false);
+  setIsPaused(false);
+  setTotalTimeLeft(0);
+  // Mark completedCount as practiceCount so evaluation screen shows
+  updateTestState({ completedCount: practiceCount, responses: newResponses });
   };
 
   const skipCurrentSituation = () => {
@@ -417,27 +412,29 @@ const SRT = () => {
     return () => window.removeEventListener('beforeunload', preventNavigation);
   }, [testInProgress]);
 
-  const handleNextSituation = async () => {
+  const handleNextSituation = async (isAutoSubmit = false) => {
     if (!user || !situations[currentIndex]) return;
 
     setLoading(true);
-      try {
-        // Save current response (no image upload per question anymore)
-        const { data: savedResponse, error } = await supabase
-          .from('test_responses')
-          .insert({
-            user_id: user.id,
-            test_type: 'srt',
-            response_text: response.trim() || null,
-            image_id: situations[currentIndex].id,
-            session_id: sessionId,
-            time_taken: Math.max(0, (practiceCount * 15) - totalTimeLeft)
-          })
-          .select()
-          .single();
+    try {
+      // Use the current state of 'response' from testState
+      const currentResponse = isAutoSubmit ? (testState.response || '') : response;
+      // Save current response (no image upload per question anymore)
+      const { data: savedResponse, error } = await supabase
+        .from('test_responses')
+        .insert({
+          user_id: user.id,
+          test_type: 'srt',
+          response_text: currentResponse.trim() || null,
+          image_id: situations[currentIndex].id,
+          session_id: sessionId,
+          time_taken: Math.max(0, (practiceCount * 15) - totalTimeLeft)
+        })
+        .select()
+        .single();
 
       if (error) throw error;
-      
+
       // Track the response
       const newResponses = [...responses, savedResponse];
       const newCompletedCount = completedCount + 1;
@@ -447,9 +444,9 @@ const SRT = () => {
         updateTestState({
           currentIndex: currentIndex + 1,
           completedCount: newCompletedCount,
-           responses: newResponses,
-           response: ''
-         });
+          responses: newResponses,
+          response: ''
+        });
       } else {
         // All situations completed
         updateTestState({
@@ -766,7 +763,7 @@ const SRT = () => {
                        Characters: {response.length} | Words: {response.split(' ').filter(word => word.length > 0).length}
                      </p>
                       <Button 
-                        onClick={handleNextSituation}
+                        onClick={() => handleNextSituation()}
                         disabled={loading}
                         className="shadow-command"
                       >
