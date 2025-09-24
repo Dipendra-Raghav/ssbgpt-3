@@ -78,26 +78,42 @@ JSON structure:
   ]
 }`,
 
-  ppdt: `You are an expert SSB PPDT/TAT evaluator. Given a candidate's story/notes, produce officer-like evaluation and improved story. Output ONLY JSON.
+  ppdt: `You are an expert SSB PPDT evaluator. Analyze the provided PPDT image and the user's story response to assess Officer-Like Qualities (OLQs). Focus on:
+- Leadership potential, decision-making skills, character portrayal, creativity, and emotional maturity
+- Practical problem-solving, teamwork, positive outlook, and realistic scenarios  
+- Coherence, depth, and presence of OLQs in the narrative
+- How well the story interprets and utilizes the visual elements in the image
 
-Constraints:
-- Structure: Situation → Task → Actions → Outcome.  
-- Hero: normal human, age-appropriate, realistic.  
-- OLQs: Effective Intelligence, Reasoning, Expression, Confidence, Determination, Organizing, Initiative, Teamwork, Responsibility, Courage, Adaptability, Liveliness.  
-- Brevity: 8–12 sentences, realistic details, avoid melodrama/clichés.  
-- Tone: constructive, ethical, service-oriented.  
+Provide individual ratings for these specific criteria:
+- Clarity & Communication (1-5): How clearly the story is written and ideas are expressed
+- Logic & Reasoning (1-5): Logical flow, cause-effect relationships, realistic solutions
+- Tone & Positivity (1-5): Positive outlook, constructive approach, officer-like tone
+- Leadership Qualities (1-5): Leadership, initiative, teamwork, responsibility demonstrated
 
 CRITICAL EVALUATION REQUIREMENTS:
-1. Generate THREE improved responses for ANY score below 5/5 (including scores of 4/5)
+1. Generate THREE improved stories for ANY score below 5/5 (including scores of 4/5)
 2. If no story content is provided, mark as "No response provided" with score 0
 
 JSON structure:
 {
   "overall_rating": [number 1-5],
-  "rationale": "Explanation of OLQs demonstrated, realism, structure, and clarity",
-  "improved_story_1": "Concise realistic story showing OLQs via actions and teamwork",
-  "improved_story_2": "Concise realistic story showing OLQs via actions and teamwork", 
-  "improved_story_3": "Concise realistic story showing OLQs via actions and teamwork"
+  "rationale": "Concise evaluation rationale explaining the overall assessment",
+  "individual_analysis": [
+    {
+      "image_description": "Brief description of what you see in the PPDT image",
+      "user_story": "The exact story text provided by the user",
+      "clarity_rating": [number 1-5],
+      "logic_rating": [number 1-5], 
+      "tone_rating": [number 1-5],
+      "leadership_rating": [number 1-5],
+      "analysis": "Detailed analysis covering strengths and areas for improvement",
+      "pros": "Key strengths demonstrated in the response",
+      "cons": "Areas that need improvement or were lacking",
+      "improved_story_1": "Enhanced version showing clearer OLQs and better narrative structure",
+      "improved_story_2": "Alternative enhanced story with different OLQ emphasis", 
+      "improved_story_3": "Concise realistic story showing OLQs via actions and teamwork"
+    }
+  ]
 }`
 };
 
@@ -177,12 +193,12 @@ serve(async (req) => {
       if (imageIds.length > 0) {
         const { data: images, error: imagesError } = await supabase
           .from('ppdt_images')
-          .select('id, description')
+          .select('id, url')
           .in('id', imageIds);
         
         if (!imagesError && images) {
           images.forEach((image: any) => {
-            testContent[image.id] = { description: image.description };
+            testContent[image.id] = { url: image.url };
           });
         }
       }
@@ -198,13 +214,37 @@ serve(async (req) => {
     ];
 
     if (testType === 'ppdt') {
-      userContent = `Please evaluate this PPDT story response:
+      // For PPDT, send actual images with user stories
+      const imageUrls = responses.map(r => testContent[r.image_id]?.url).filter(url => url);
+      if (imageUrls.length === 0) {
+        throw new Error('No PPDT images found for evaluation');
+      }
 
-Story: ${responses.map(r => r.response_text || 'No response provided').join(' ')}
+      // Send image(s) with story content to OpenAI
+      const userStory = responses.map(r => r.response_text || 'No response provided').join(' ');
+      
+      messages.push({
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Please evaluate this PPDT story response:
+
+Story: ${userStory}
 
 ${responses.some(r => !r.response_text || !r.response_text.trim()) ? 'IMPORTANT: No story content was provided. Mark this as "No response provided" with score 0.' : ''}
 
-Provide evaluation focusing on leadership potential, creativity, problem-solving ability, and character portrayal.`;
+Provide evaluation focusing on leadership potential, creativity, problem-solving ability, and character portrayal based on both the image content and the user's story.`
+          },
+          ...imageUrls.map(url => ({
+            type: 'image_url',
+            image_url: {
+              url: url,
+              detail: 'high'
+            }
+          }))
+        ]
+      });
     } else if (testType === 'srt') {
       userContent = `Please evaluate these SRT situation responses:
 
@@ -227,10 +267,13 @@ Provide evaluation focusing on psychological insights, word associations, senten
       throw new Error(`Unsupported test type: ${testType}. Supported types are: ppdt, srt, wat`);
     }
 
-    messages.push({
-      role: 'user',
-      content: userContent
-    });
+    // Add user content message for non-PPDT tests (PPDT already added above with images)
+    if (testType !== 'ppdt') {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+    }
 
     console.log('Sending evaluation request to OpenAI with messages:', JSON.stringify(messages, null, 2));
 
@@ -248,7 +291,7 @@ Provide evaluation focusing on psychological insights, word associations, senten
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-4o-mini', // Vision-capable model for PPDT images
             messages: messages,
             max_tokens: 2000,
             temperature: 0.7,
