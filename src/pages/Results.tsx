@@ -199,26 +199,32 @@ const Results = () => {
             const response = responses[index];
             const imageUrl = response?.ppdt_images?.url;
             
+            // Calculate average score from PPDT ratings
+            const ppdtItem = item as any;
+            const averageScore = Math.round(
+              ((ppdtItem.clarity_rating || 0) + 
+               (ppdtItem.logic_rating || 0) + 
+               (ppdtItem.tone_rating || 0) + 
+               (ppdtItem.leadership_rating || 0)) / 4
+            );
+            
             return (
               <div key={index} className="border rounded-lg p-4 bg-card">
-                {/* Image at the top with score - consistent with WAT/SRT */}
-                <div className="flex items-center justify-between mb-3">
-                  <h5 className="font-semibold text-foreground">
-                    PPDT Image {index + 1}
-                  </h5>
-                  <Badge variant={getScoreBadge((item as any).score || 0)}>Score: {(item as any).score || 0}/5</Badge>
-                </div>
-
-                {/* Image Photo */}
+                {/* Image Photo at the top */}
                 {imageUrl && (
                   <div className="mb-4">
                     <img 
                       src={imageUrl} 
-                      alt="PPDT Test Image" 
+                      alt={`PPDT Test Image ${index + 1}`}
                       className="w-full max-w-md h-48 object-cover rounded border mx-auto"
                     />
                   </div>
                 )}
+
+                {/* Score badge below image */}
+                <div className="flex items-center justify-center mb-3">
+                  <Badge variant={getScoreBadge(averageScore)}>Score: {averageScore}/5</Badge>
+                </div>
 
                 {/* Your Response */}
                 <div className="space-y-3">
@@ -228,45 +234,45 @@ const Results = () => {
                       <span className="text-sm font-medium text-foreground">Your Response:</span>
                     </div>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {(item as any).user_story || item.user_response || 'No story provided'}
+                      {ppdtItem.user_story || item.user_response || 'No story provided'}
                     </p>
                   </div>
 
-                  {/* Analysis, Pros, Cons */}
-                  {item.score <= 4 && (
+                  {/* Analysis, Pros, Cons - show if score is 4 or below */}
+                  {averageScore <= 4 && (
                     <>
-                      {item.analysis && (
+                      {ppdtItem.analysis && (
                         <div className="p-3 rounded border bg-destructive/10 border-destructive/30">
                           <div className="flex items-center gap-2 mb-1">
                             <AlertTriangle className="w-4 h-4 text-destructive" />
                             <span className="text-sm font-medium text-destructive">Analysis:</span>
                           </div>
-                          <p className="text-sm text-destructive/90">{item.analysis}</p>
+                          <p className="text-sm text-destructive/90">{ppdtItem.analysis}</p>
                         </div>
                       )}
                       
-                      {(item as any).pros && (
+                      {ppdtItem.pros && (
                         <div className="p-3 rounded border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
                           <div className="flex items-center gap-2 mb-1">
                             <Star className="w-4 h-4 text-green-600" />
                             <span className="text-sm font-medium text-green-600">Strengths:</span>
                           </div>
-                          <p className="text-sm text-green-700 dark:text-green-300">{(item as any).pros}</p>
+                          <p className="text-sm text-green-700 dark:text-green-300">{ppdtItem.pros}</p>
                         </div>
                       )}
                       
-                      {(item as any).cons && (
+                      {ppdtItem.cons && (
                         <div className="p-3 rounded border bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
                           <div className="flex items-center gap-2 mb-1">
                             <TrendingDown className="w-4 h-4 text-orange-600" />
                             <span className="text-sm font-medium text-orange-600">Areas for Improvement:</span>
                           </div>
-                          <p className="text-sm text-orange-700 dark:text-orange-300">{(item as any).cons}</p>
+                          <p className="text-sm text-orange-700 dark:text-orange-300">{ppdtItem.cons}</p>
                         </div>
                       )}
 
                       {/* Improved Stories in Horizontal Tabs */}
-                      {((item as any).improved_story_1 || (item as any).improved_story_2 || (item as any).improved_story_3) && (
+                      {(ppdtItem.improved_story_1 || ppdtItem.improved_story_2 || ppdtItem.improved_story_3) && (
                         <div className="mt-4">
                           <Tabs defaultValue="story1" className="w-full">
                             <TabsList className="grid w-full grid-cols-3">
@@ -282,7 +288,7 @@ const Results = () => {
                                   <span className="text-sm font-medium text-green-400">Enhanced Story Version 1:</span>
                                 </div>
                                 <p className="text-sm text-green-300 whitespace-pre-wrap">
-                                  {(item as any).improved_story_1 || 'No improved story available'}
+                                  {ppdtItem.improved_story_1 || 'No improved story available'}
                                 </p>
                               </div>
                             </TabsContent>
@@ -294,7 +300,7 @@ const Results = () => {
                                   <span className="text-sm font-medium text-green-400">Enhanced Story Version 2:</span>
                                 </div>
                                 <p className="text-sm text-green-300 whitespace-pre-wrap">
-                                  {(item as any).improved_story_2 || 'No improved story available'}
+                                  {ppdtItem.improved_story_2 || 'No improved story available'}
                                 </p>
                               </div>
                             </TabsContent>
@@ -306,7 +312,7 @@ const Results = () => {
                                   <span className="text-sm font-medium text-green-400">Enhanced Story Version 3:</span>
                                 </div>
                                 <p className="text-sm text-green-300 whitespace-pre-wrap">
-                                  {(item as any).improved_story_3 || 'No improved story available'}
+                                  {ppdtItem.improved_story_3 || 'No improved story available'}
                                 </p>
                               </div>
                             </TabsContent>
@@ -314,6 +320,19 @@ const Results = () => {
                         </div>
                       )}
                     </>
+                  )}
+
+                  {/* Great response message for high scores */}
+                  {averageScore > 4 && (
+                    <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Star className="w-4 h-4 text-green-400" />
+                        <span className="text-sm font-medium text-green-400">Great Response!</span>
+                      </div>
+                      <p className="text-sm text-green-300">
+                        This response scored well above average. Keep up the good work!
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
