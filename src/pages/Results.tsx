@@ -191,7 +191,7 @@ const Results = () => {
       );
     }
 
-    // Handle PPDT differently with image display and tabbed improved stories
+    // Handle PPDT with consistent layout like WAT/SRT
     if (evaluation.test_type === 'ppdt') {
       return (
         <div className="space-y-4">
@@ -201,73 +201,47 @@ const Results = () => {
             
             return (
               <div key={index} className="border rounded-lg p-4 bg-card">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Column - Image and Story */}
-                  <div className="space-y-4">
-                    {imageUrl && (
-                      <div className="bg-muted p-3 rounded border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Image className="w-4 h-4 text-primary" />
-                          <span className="text-sm font-medium text-foreground">PPDT Image:</span>
-                        </div>
-                        <img 
-                          src={imageUrl} 
-                          alt="PPDT Test Image" 
-                          className="w-full h-48 object-cover rounded border"
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="bg-muted p-3 rounded border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">Your Story:</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {(item as any).user_story || item.user_response || 'No story provided'}
-                      </p>
+                {/* Image at the top with score - consistent with WAT/SRT */}
+                <div className="flex items-center justify-between mb-3">
+                  <h5 className="font-semibold text-foreground">
+                    PPDT Image {index + 1}
+                  </h5>
+                  <Badge variant={getScoreBadge(item.score)}>Score: {item.score}/5</Badge>
+                </div>
+
+                {/* Image Photo */}
+                {imageUrl && (
+                  <div className="mb-4">
+                    <img 
+                      src={imageUrl} 
+                      alt="PPDT Test Image" 
+                      className="w-full max-w-md h-48 object-cover rounded border mx-auto"
+                    />
+                  </div>
+                )}
+
+                {/* Your Response */}
+                <div className="space-y-3">
+                  <div className="bg-muted p-3 rounded border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <MessageSquare className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Your Response:</span>
                     </div>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {(item as any).user_story || item.user_response || 'No story provided'}
+                    </p>
                   </div>
 
-                  {/* Right Column - Evaluation */}
-                  <div className="space-y-4">
-                    {/* Individual Ratings */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {(item as any).clarity_rating && (
-                        <div className="text-center p-3 bg-card border border-border rounded-lg">
-                          <div className="text-lg font-bold text-primary">{(item as any).clarity_rating}</div>
-                          <div className="text-xs text-muted-foreground">Clarity</div>
-                        </div>
-                      )}
-                      {(item as any).logic_rating && (
-                        <div className="text-center p-3 bg-card border border-border rounded-lg">
-                          <div className="text-lg font-bold text-primary">{(item as any).logic_rating}</div>
-                          <div className="text-xs text-muted-foreground">Logic</div>
-                        </div>
-                      )}
-                      {(item as any).tone_rating && (
-                        <div className="text-center p-3 bg-card border border-border rounded-lg">
-                          <div className="text-lg font-bold text-primary">{(item as any).tone_rating}</div>
-                          <div className="text-xs text-muted-foreground">Tone</div>
-                        </div>
-                      )}
-                      {(item as any).leadership_rating && (
-                        <div className="text-center p-3 bg-card border border-border rounded-lg">
-                          <div className="text-lg font-bold text-primary">{(item as any).leadership_rating}</div>
-                          <div className="text-xs text-muted-foreground">Leadership</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Analysis, Pros, Cons */}
-                    <div className="space-y-3">
+                  {/* Analysis, Pros, Cons */}
+                  {item.score <= 4 && (
+                    <>
                       {item.analysis && (
-                        <div className="p-3 rounded border bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+                        <div className="p-3 rounded border bg-destructive/10 border-destructive/30">
                           <div className="flex items-center gap-2 mb-1">
-                            <AlertTriangle className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-600">Analysis:</span>
+                            <AlertTriangle className="w-4 h-4 text-destructive" />
+                            <span className="text-sm font-medium text-destructive">Analysis:</span>
                           </div>
-                          <p className="text-sm text-blue-700 dark:text-blue-300">{item.analysis}</p>
+                          <p className="text-sm text-destructive/90">{item.analysis}</p>
                         </div>
                       )}
                       
@@ -290,60 +264,58 @@ const Results = () => {
                           <p className="text-sm text-orange-700 dark:text-orange-300">{(item as any).cons}</p>
                         </div>
                       )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Improved Stories in Tabs */}
-                {evaluation.overall_score && evaluation.overall_score <= 4 && (
-                  ((item as any).improved_story_1 || (item as any).improved_story_2 || (item as any).improved_story_3) && (
-                    <div className="mt-6 pt-4 border-t">
-                      <Tabs defaultValue="story1" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="story1">Improved Story 1</TabsTrigger>
-                          <TabsTrigger value="story2">Improved Story 2</TabsTrigger>
-                          <TabsTrigger value="story3">Improved Story 3</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="story1" className="mt-4">
-                          <div className="p-4 rounded border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Edit3 className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-600">Enhanced Story Version 1:</span>
-                            </div>
-                            <p className="text-sm text-green-700 dark:text-green-300 whitespace-pre-wrap">
-                              {(item as any).improved_story_1 || 'No improved story available'}
-                            </p>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="story2" className="mt-4">
-                          <div className="p-4 rounded border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Edit3 className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-600">Enhanced Story Version 2:</span>
-                            </div>
-                            <p className="text-sm text-green-700 dark:text-green-300 whitespace-pre-wrap">
-                              {(item as any).improved_story_2 || 'No improved story available'}
-                            </p>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="story3" className="mt-4">
-                          <div className="p-4 rounded border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Edit3 className="w-4 h-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-600">Enhanced Story Version 3:</span>
-                            </div>
-                            <p className="text-sm text-green-700 dark:text-green-300 whitespace-pre-wrap">
-                              {(item as any).improved_story_3 || 'No improved story available'}
-                            </p>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                  )
-                )}
+                      {/* Improved Stories in Horizontal Tabs */}
+                      {((item as any).improved_story_1 || (item as any).improved_story_2 || (item as any).improved_story_3) && (
+                        <div className="mt-4">
+                          <Tabs defaultValue="story1" className="w-full">
+                            <TabsList className="grid w-full grid-cols-3">
+                              <TabsTrigger value="story1">Improved Response 1</TabsTrigger>
+                              <TabsTrigger value="story2">Improved Response 2</TabsTrigger>
+                              <TabsTrigger value="story3">Improved Response 3</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="story1" className="mt-4">
+                              <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Edit3 className="w-4 h-4 text-green-400" />
+                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 1:</span>
+                                </div>
+                                <p className="text-sm text-green-300 whitespace-pre-wrap">
+                                  {(item as any).improved_story_1 || 'No improved story available'}
+                                </p>
+                              </div>
+                            </TabsContent>
+                            
+                            <TabsContent value="story2" className="mt-4">
+                              <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Edit3 className="w-4 h-4 text-green-400" />
+                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 2:</span>
+                                </div>
+                                <p className="text-sm text-green-300 whitespace-pre-wrap">
+                                  {(item as any).improved_story_2 || 'No improved story available'}
+                                </p>
+                              </div>
+                            </TabsContent>
+                            
+                            <TabsContent value="story3" className="mt-4">
+                              <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Edit3 className="w-4 h-4 text-green-400" />
+                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 3:</span>
+                                </div>
+                                <p className="text-sm text-green-300 whitespace-pre-wrap">
+                                  {(item as any).improved_story_3 || 'No improved story available'}
+                                </p>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
