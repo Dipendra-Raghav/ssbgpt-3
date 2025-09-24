@@ -214,36 +214,42 @@ serve(async (req) => {
     ];
 
     if (testType === 'ppdt') {
-      // For PPDT, send actual images with user stories
-      const imageUrls = responses.map(r => testContent[r.image_id]?.url).filter(url => url);
-      if (imageUrls.length === 0) {
+      // For PPDT, send each image with its corresponding story individually
+      const contentItems = [];
+      
+      // Add text explaining the evaluation task
+      contentItems.push({
+        type: 'text',
+        text: `Please evaluate these PPDT image(s) and story responses individually:
+
+${responses.map((r, i) => `Image ${i + 1} Story: ${r.response_text || 'No response provided'}`).join('\n\n')}
+
+IMPORTANT: You must provide individual analysis for ALL ${responses.length} PPDT images and stories listed above. For any image where the user story shows "No response provided", mark it with score 0 and note "No response provided" in the analysis.
+
+Provide evaluation focusing on leadership potential, creativity, problem-solving ability, and character portrayal based on both the image content and the user's story.`
+      });
+      
+      // Add each PPDT image
+      responses.forEach((r, i) => {
+        const imageUrl = testContent[r.image_id]?.url;
+        if (imageUrl) {
+          contentItems.push({
+            type: 'image_url',
+            image_url: {
+              url: imageUrl,
+              detail: 'high'
+            }
+          });
+        }
+      });
+      
+      if (contentItems.length === 1) { // Only text, no images
         throw new Error('No PPDT images found for evaluation');
       }
-
-      // Send image(s) with story content to OpenAI
-      const userStory = responses.map(r => r.response_text || 'No response provided').join(' ');
       
       messages.push({
         role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Please evaluate this PPDT story response:
-
-Story: ${userStory}
-
-${responses.some(r => !r.response_text || !r.response_text.trim()) ? 'IMPORTANT: No story content was provided. Mark this as "No response provided" with score 0.' : ''}
-
-Provide evaluation focusing on leadership potential, creativity, problem-solving ability, and character portrayal based on both the image content and the user's story.`
-          },
-          ...imageUrls.map(url => ({
-            type: 'image_url',
-            image_url: {
-              url: url,
-              detail: 'high'
-            }
-          }))
-        ]
+        content: contentItems
       });
     } else if (testType === 'srt') {
       userContent = `Please evaluate these SRT situation responses:

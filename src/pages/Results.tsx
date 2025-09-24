@@ -206,7 +206,7 @@ const Results = () => {
                   <h5 className="font-semibold text-foreground">
                     PPDT Image {index + 1}
                   </h5>
-                  <Badge variant={getScoreBadge(item.score)}>Score: {item.score}/5</Badge>
+                  <Badge variant={getScoreBadge((item as any).score || 0)}>Score: {(item as any).score || 0}/5</Badge>
                 </div>
 
                 {/* Image Photo */}
@@ -360,39 +360,54 @@ const Results = () => {
           <p className="text-sm text-destructive/90">{item.analysis}</p>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-2">
-            <Edit3 className="w-4 h-4 text-green-400" />
-            <span className="text-sm font-medium text-green-400">Improved Responses:</span>
+        {/* Improved Responses in Horizontal Tabs */}
+        {(item.improved_response_1 || item.improved_response_2 || item.improved_response_3 || item.improved_response) && (
+          <div className="mt-4">
+            <Tabs defaultValue="response1" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="response1">Improved Response 1</TabsTrigger>
+                <TabsTrigger value="response2">Improved Response 2</TabsTrigger>
+                <TabsTrigger value="response3">Improved Response 3</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="response1" className="mt-4">
+                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Edit3 className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 1:</span>
+                  </div>
+                  <p className="text-sm text-green-300 whitespace-pre-wrap">
+                    {item.improved_response_1 || item.improved_response || 'No improved response available'}
+                  </p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="response2" className="mt-4">
+                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Edit3 className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 2:</span>
+                  </div>
+                  <p className="text-sm text-green-300 whitespace-pre-wrap">
+                    {item.improved_response_2 || 'No improved response available'}
+                  </p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="response3" className="mt-4">
+                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Edit3 className="w-4 h-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 3:</span>
+                  </div>
+                  <p className="text-sm text-green-300 whitespace-pre-wrap">
+                    {item.improved_response_3 || 'No improved response available'}
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
-          
-          {(item.improved_response_1 || item.improved_response) && (
-            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-green-400">Option 1:</span>
-              </div>
-              <p className="text-sm text-green-300">{item.improved_response_1 || item.improved_response}</p>
-            </div>
-          )}
-          
-          {item.improved_response_2 && (
-            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-green-400">Option 2:</span>
-              </div>
-              <p className="text-sm text-green-300">{item.improved_response_2}</p>
-            </div>
-          )}
-          
-          {item.improved_response_3 && (
-            <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-green-400">Option 3:</span>
-              </div>
-              <p className="text-sm text-green-300">{item.improved_response_3}</p>
-            </div>
-          )}
-        </div>
+        )}
       </>
     )}
 
