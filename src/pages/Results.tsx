@@ -39,8 +39,6 @@ interface Evaluation {
   overall_score: number;
   analysis?: string;
   detailed_analysis: {
-    rating: number;
-    rationale: string;
     individual_analysis: Array<{
       word?: string;
       situation?: string;
@@ -197,7 +195,8 @@ const Results = () => {
         <div className="space-y-4">
           {individualAnalysis.map((item, index) => {
             const response = responses[index];
-            const imageUrl = response?.ppdt_images?.url;
+            // Fix: ppdt_images is an array, get the first image's url
+            const imageUrl = Array.isArray(response?.ppdt_images) ? response.ppdt_images[0]?.url : response?.ppdt_images?.url;
             
             // Calculate average score from PPDT ratings
             const ppdtItem = item as any;
@@ -272,47 +271,24 @@ const Results = () => {
                       )}
 
                       {/* Improved Stories in Horizontal Tabs */}
-                      {(ppdtItem.improved_story_1 || ppdtItem.improved_story_2 || ppdtItem.improved_story_3) && (
+                      {(ppdtItem.improved_story_1 || ppdtItem.improved_story_2) && (
                         <div className="mt-4">
                           <Tabs defaultValue="story1" className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
+                            <TabsList className="grid w-full grid-cols-2">
                               <TabsTrigger value="story1">Improved Response 1</TabsTrigger>
                               <TabsTrigger value="story2">Improved Response 2</TabsTrigger>
-                              <TabsTrigger value="story3">Improved Response 3</TabsTrigger>
                             </TabsList>
-                            
                             <TabsContent value="story1" className="mt-4">
                               <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Edit3 className="w-4 h-4 text-green-400" />
-                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 1:</span>
-                                </div>
                                 <p className="text-sm text-green-300 whitespace-pre-wrap">
                                   {ppdtItem.improved_story_1 || 'No improved story available'}
                                 </p>
                               </div>
                             </TabsContent>
-                            
                             <TabsContent value="story2" className="mt-4">
                               <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Edit3 className="w-4 h-4 text-green-400" />
-                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 2:</span>
-                                </div>
                                 <p className="text-sm text-green-300 whitespace-pre-wrap">
                                   {ppdtItem.improved_story_2 || 'No improved story available'}
-                                </p>
-                              </div>
-                            </TabsContent>
-                            
-                            <TabsContent value="story3" className="mt-4">
-                              <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Edit3 className="w-4 h-4 text-green-400" />
-                                  <span className="text-sm font-medium text-green-400">Enhanced Story Version 3:</span>
-                                </div>
-                                <p className="text-sm text-green-300 whitespace-pre-wrap">
-                                  {ppdtItem.improved_story_3 || 'No improved story available'}
                                 </p>
                               </div>
                             </TabsContent>
@@ -388,37 +364,22 @@ const Results = () => {
                 <TabsTrigger value="response2">Improved Response 2</TabsTrigger>
                 <TabsTrigger value="response3">Improved Response 3</TabsTrigger>
               </TabsList>
-              
               <TabsContent value="response1" className="mt-4">
                 <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Edit3 className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 1:</span>
-                  </div>
                   <p className="text-sm text-green-300 whitespace-pre-wrap">
                     {item.improved_response_1 || item.improved_response || 'No improved response available'}
                   </p>
                 </div>
               </TabsContent>
-              
               <TabsContent value="response2" className="mt-4">
                 <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Edit3 className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 2:</span>
-                  </div>
                   <p className="text-sm text-green-300 whitespace-pre-wrap">
                     {item.improved_response_2 || 'No improved response available'}
                   </p>
                 </div>
               </TabsContent>
-              
               <TabsContent value="response3" className="mt-4">
                 <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Edit3 className="w-4 h-4 text-green-400" />
-                    <span className="text-sm font-medium text-green-400">Enhanced Response Version 3:</span>
-                  </div>
                   <p className="text-sm text-green-300 whitespace-pre-wrap">
                     {item.improved_response_3 || 'No improved response available'}
                   </p>
@@ -492,7 +453,7 @@ const Results = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* PPDT Tab */}
+        {/* PPDT Tab - Only Detailed Feedback */}
         <TabsContent value="ppdt" className="space-y-6">
           <Card>
             <CardHeader>
@@ -516,9 +477,9 @@ const Results = () => {
                             PPDT Evaluation – {formatDate(evaluation.created_at)}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getScoreBadge(evaluation.score || 0)}>
-                              Score: {evaluation.score || 'N/A'}/5
-                            </Badge>
+                              <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
+                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                              </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
@@ -530,45 +491,8 @@ const Results = () => {
                       <CollapsibleContent className="mt-2">
                         <Card>
                           <CardContent className="pt-4">
-                            <Tabs defaultValue="overview" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="detailed">Detailed Feedback</TabsTrigger>
-                              </TabsList>
-                              
-                              <TabsContent value="overview" className="space-y-4 mt-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-primary">{evaluation.score || 'N/A'}</div>
-  <div className="text-sm text-muted-foreground">Average Score (out of 5)</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-destructive">
-    {evaluation.score && evaluation.score <= 4 ? '1' : '0'}
-  </div>
-  <div className="text-sm text-muted-foreground">Responses ≤4</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-green-500">
-    {evaluation.overall_score || 'N/A'}
-  </div>
-  <div className="text-sm text-muted-foreground">Overall Score</div>
-</div>
-
-                                </div>
-                                
-                                <div className="p-4 bg-muted rounded-lg">
-                                  <h4 className="font-semibold mb-2">Overall AI Feedback</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {evaluation.analysis || evaluation.detailed_analysis?.rationale || 'No analysis available for this evaluation.'}
-                                  </p>
-                                </div>
-                              </TabsContent>
-                              
-                              <TabsContent value="detailed" className="space-y-4 mt-4">
-                                {renderIndividualAnalysis(evaluation)}
-                              </TabsContent>
-                            </Tabs>
+                            {/* Only show detailed feedback */}
+                            {renderIndividualAnalysis(evaluation)}
                           </CardContent>
                         </Card>
                       </CollapsibleContent>
@@ -586,7 +510,7 @@ const Results = () => {
           </Card>
         </TabsContent>
 
-        {/* WAT Tab */}
+        {/* WAT Tab - Only Detailed Feedback */}
         <TabsContent value="wat" className="space-y-6">
           <Card>
             <CardHeader>
@@ -610,9 +534,9 @@ const Results = () => {
                             WAT Evaluation – {formatDate(evaluation.created_at)}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getScoreBadge(evaluation.score || 0)}>
-                              Score: {evaluation.score || 'N/A'}/5
-                            </Badge>
+                              <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
+                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                              </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
@@ -624,45 +548,8 @@ const Results = () => {
                       <CollapsibleContent className="mt-2">
                         <Card>
                           <CardContent className="pt-4">
-                            <Tabs defaultValue="overview" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="detailed">Detailed Feedback</TabsTrigger>
-                              </TabsList>
-                              
-                              <TabsContent value="overview" className="space-y-4 mt-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-primary">{evaluation.score || 'N/A'}</div>
-  <div className="text-sm text-muted-foreground">Average Score (out of 5)</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-destructive">
-    {evaluation.score && evaluation.score <= 4 ? '1' : '0'}
-  </div>
-  <div className="text-sm text-muted-foreground">Responses ≤4</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-green-500">
-    {evaluation.overall_score || 'N/A'}
-  </div>
-  <div className="text-sm text-muted-foreground">Overall Score</div>
-</div>
-
-                                </div>
-                                
-                                <div className="p-4 bg-muted rounded-lg">
-                                  <h4 className="font-semibold mb-2">Overall AI Feedback</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {evaluation.analysis || 'No analysis available for this evaluation.'}
-                                  </p>
-                                </div>
-                              </TabsContent>
-                              
-                              <TabsContent value="detailed" className="space-y-4 mt-4">
-                                {renderIndividualAnalysis(evaluation)}
-                              </TabsContent>
-                            </Tabs>
+                            {/* Only show detailed feedback */}
+                            {renderIndividualAnalysis(evaluation)}
                           </CardContent>
                         </Card>
                       </CollapsibleContent>
@@ -680,7 +567,7 @@ const Results = () => {
           </Card>
         </TabsContent>
 
-        {/* SRT Tab */}
+        {/* SRT Tab - Only Detailed Feedback */}
         <TabsContent value="srt" className="space-y-6">
           <Card>
             <CardHeader>
@@ -704,9 +591,9 @@ const Results = () => {
                             SRT Evaluation – {formatDate(evaluation.created_at)}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={getScoreBadge(evaluation.score || 0)}>
-                              Score: {evaluation.score || 'N/A'}/5
-                            </Badge>
+                              <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
+                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                              </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
@@ -718,45 +605,8 @@ const Results = () => {
                       <CollapsibleContent className="mt-2">
                         <Card>
                           <CardContent className="pt-4">
-                            <Tabs defaultValue="overview" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                                <TabsTrigger value="detailed">Detailed Feedback</TabsTrigger>
-                              </TabsList>
-                              
-                              <TabsContent value="overview" className="space-y-4 mt-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-primary">{evaluation.score || 'N/A'}</div>
-  <div className="text-sm text-muted-foreground">Average Score (out of 5)</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-destructive">
-    {evaluation.score && evaluation.score <= 3 ? '1' : '0'}
-  </div>
-  <div className="text-sm text-muted-foreground">Responses ≤4</div>
-</div>
-<div className="text-center p-4 bg-card border border-border rounded-lg">
-  <div className="text-2xl font-bold text-green-500">
-    {evaluation.overall_score || 'N/A'}
-  </div>
-  <div className="text-sm text-muted-foreground">Overall Score</div>
-</div>
-
-                                </div>
-                                
-                                <div className="p-4 bg-muted rounded-lg">
-                                  <h4 className="font-semibold mb-2">Overall AI Feedback</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {evaluation.analysis || 'No analysis available for this evaluation.'}
-                                  </p>
-                                </div>
-                              </TabsContent>
-                              
-                              <TabsContent value="detailed" className="space-y-4 mt-4">
-                                {renderIndividualAnalysis(evaluation)}
-                              </TabsContent>
-                            </Tabs>
+                            {/* Only show detailed feedback */}
+                            {renderIndividualAnalysis(evaluation)}
                           </CardContent>
                         </Card>
                       </CollapsibleContent>
