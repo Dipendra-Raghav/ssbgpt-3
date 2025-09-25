@@ -194,38 +194,28 @@ const Results = () => {
       return (
         <div className="space-y-4">
           {individualAnalysis.map((item, index) => {
-            const response = responses[index];
-            // Fix: ppdt_images is an array, get the first image's url
-            const imageUrl = Array.isArray(response?.ppdt_images) ? response.ppdt_images[0]?.url : response?.ppdt_images?.url;
-            
-            // Calculate average score from PPDT ratings
+            // Use image_url from the OpenAI edge function output
+            const imageUrl = (item as any).image_url;
             const ppdtItem = item as any;
-            const averageScore = Math.round(
-              ((ppdtItem.clarity_rating || 0) + 
-               (ppdtItem.logic_rating || 0) + 
-               (ppdtItem.tone_rating || 0) + 
-               (ppdtItem.leadership_rating || 0)) / 4
-            );
-            
+            const score = ppdtItem.score || 0;
+
             return (
               <div key={index} className="border rounded-lg p-4 bg-card">
-                {/* Image Photo at the top */}
+                {/* Image at the top */}
                 {imageUrl && (
                   <div className="mb-4">
-                    <img 
-                      src={imageUrl} 
-                      alt={`PPDT Test Image ${index + 1}`}
-                      className="w-full max-w-md h-48 object-cover rounded border mx-auto"
+                    <img
+                      src={imageUrl}
+                      alt={`PPDT stimulus image ${index + 1}`}
+                      className="rounded-lg w-full max-w-sm mx-auto"
                     />
                   </div>
                 )}
 
-                {/* Score badge below image */}
                 <div className="flex items-center justify-center mb-3">
-                  <Badge variant={getScoreBadge(averageScore)}>Score: {averageScore}/5</Badge>
+                  <Badge variant={getScoreBadge(score)}>Score: {score}/5</Badge>
                 </div>
 
-                {/* Your Response */}
                 <div className="space-y-3">
                   <div className="bg-muted p-3 rounded border">
                     <div className="flex items-center gap-2 mb-1">
@@ -233,12 +223,12 @@ const Results = () => {
                       <span className="text-sm font-medium text-foreground">Your Response:</span>
                     </div>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {ppdtItem.user_story || item.user_response || 'No story provided'}
+                      {ppdtItem.user_story || ppdtItem.user_response || 'No story provided'}
                     </p>
                   </div>
 
                   {/* Analysis, Pros, Cons - show if score is 4 or below */}
-                  {averageScore <= 4 && (
+                  {score <= 4 && (
                     <>
                       {ppdtItem.analysis && (
                         <div className="p-3 rounded border bg-destructive/10 border-destructive/30">
@@ -249,7 +239,7 @@ const Results = () => {
                           <p className="text-sm text-destructive/90">{ppdtItem.analysis}</p>
                         </div>
                       )}
-                      
+
                       {ppdtItem.pros && (
                         <div className="p-3 rounded border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
                           <div className="flex items-center gap-2 mb-1">
@@ -259,7 +249,7 @@ const Results = () => {
                           <p className="text-sm text-green-700 dark:text-green-300">{ppdtItem.pros}</p>
                         </div>
                       )}
-                      
+
                       {ppdtItem.cons && (
                         <div className="p-3 rounded border bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
                           <div className="flex items-center gap-2 mb-1">
@@ -299,7 +289,7 @@ const Results = () => {
                   )}
 
                   {/* Great response message for high scores */}
-                  {averageScore > 4 && (
+                  {score > 4 && (
                     <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
                       <div className="flex items-center gap-2 mb-1">
                         <Star className="w-4 h-4 text-green-400" />

@@ -337,7 +337,7 @@ Provide evaluation focusing on psychological insights, word associations, senten
     const { data: savedEvaluation, error: saveError } = await supabase.from('evaluations').insert({
       user_id: userId,
       test_type: testType,
-      overall_score: evaluation.overall_score,
+      overall_score: Math.round(evaluation.overall_score),
       analysis: evaluation.rationale,
       detailed_analysis: {
         rating: evaluation.overall_rating,
