@@ -219,74 +219,149 @@ const Subscription = () => {
           </div>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {subscriptionPlans.map((plan) => (
-            <Card key={plan.id} className="relative flex flex-col border-border bg-card hover:bg-card/80 transition-all duration-300">
-              {plan.badge && (
-                <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-accent text-accent-foreground px-3 py-1">
-                  {plan.badge}
-                </Badge>
-              )}
-
-              <CardHeader className="text-center pb-4">
-                <ShieldIcon starCount={plan.starCount} />
-                <h3 className="text-2xl font-semibold">{plan.name}</h3>
-
-                <div className="mt-4">
-                  <div className="text-3xl font-bold">{plan.price}</div>
-                  {plan.originalPrice && (
-                    <div className="text-sm text-muted-foreground line-through">
-                      {plan.originalPrice}
-                    </div>
-                  )}
-                  {plan.duration && (
-                    <div className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 mt-1 rounded inline-block">
-                      {plan.duration}
-                    </div>
-                  )}
-                  {plan.savings && (
-                    <div className="text-sm text-green-500 font-medium mt-1">
-                      {plan.savings}
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="flex flex-col flex-grow justify-between space-y-4">
-                <div className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-{plan.id !== 'cadet' && (
-                  hasActivePlan() ? (
-                    <Button variant="outline" className="w-full mt-6" disabled>
-                      {subscription?.plan_name === plan.name ? 'Current Plan' : 'Choose Plan'}
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
-                      onClick={() => handlePayment(plan.id, plan.name)}
-                      disabled={payingPlanId === plan.id}
-                    >
-                      {payingPlanId === plan.id ? 'Opening Razorpay…' : 'Choose Plan'}
-                    </Button>
-                  )
+        {/* Pricing Cards - 3-2 Layout */}
+        <div className="space-y-8">
+          {/* Top Row - First 3 Plans */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subscriptionPlans.slice(0, 3).map((plan) => (
+              <Card key={plan.id} className="relative flex flex-col border-border bg-card hover:bg-card/80 transition-all duration-300">
+                {plan.badge && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-accent text-accent-foreground px-3 py-1">
+                    {plan.badge}
+                  </Badge>
                 )}
 
-                {plan.id === 'cadet' && !hasActivePlan() && (
-                  <Button variant="secondary" className="w-full mt-6" disabled>
-                    Current Plan
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                <CardHeader className="text-center pb-4">
+                  <ShieldIcon starCount={plan.starCount} />
+                  <h3 className="text-2xl font-semibold">{plan.name}</h3>
+
+                  <div className="mt-4">
+                    <div className="text-3xl font-bold">{plan.price}</div>
+                    {plan.originalPrice && (
+                      <div className="text-sm text-muted-foreground line-through">
+                        {plan.originalPrice}
+                      </div>
+                    )}
+                    {plan.duration && (
+                      <div className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 mt-1 rounded inline-block">
+                        {plan.duration}
+                      </div>
+                    )}
+                    {plan.savings && (
+                      <div className="text-sm text-green-500 font-medium mt-1">
+                        {plan.savings}
+                      </div>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="flex flex-col flex-grow justify-between space-y-4">
+                  <div className="space-y-3">
+                    {plan.features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {plan.id !== 'cadet' && (
+                    hasActivePlan() ? (
+                      <Button variant="outline" className="w-full mt-6" disabled>
+                        {subscription?.plan_name === plan.name ? 'Current Plan' : 'Choose Plan'}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() => handlePayment(plan.id, plan.name)}
+                        disabled={payingPlanId === plan.id}
+                      >
+                        {payingPlanId === plan.id ? 'Opening Razorpay…' : 'Choose Plan'}
+                      </Button>
+                    )
+                  )}
+
+                  {plan.id === 'cadet' && !hasActivePlan() && (
+                    <Button variant="secondary" className="w-full mt-6" disabled>
+                      Current Plan
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Bottom Row - Last 2 Plans (Premium) */}
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl">
+              {subscriptionPlans.slice(3).map((plan) => (
+                <Card key={plan.id} className="relative flex flex-col border-border bg-card hover:bg-card/80 transition-all duration-300 ring-2 ring-primary/20">
+                  {plan.badge && (
+                    <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-accent text-accent-foreground px-3 py-1">
+                      {plan.badge}
+                    </Badge>
+                  )}
+
+                  <CardHeader className="text-center pb-4">
+                    <ShieldIcon starCount={plan.starCount} />
+                    <h3 className="text-2xl font-semibold">{plan.name}</h3>
+
+                    <div className="mt-4">
+                      <div className="text-3xl font-bold">{plan.price}</div>
+                      {plan.originalPrice && (
+                        <div className="text-sm text-muted-foreground line-through">
+                          {plan.originalPrice}
+                        </div>
+                      )}
+                      {plan.duration && (
+                        <div className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 mt-1 rounded inline-block">
+                          {plan.duration}
+                        </div>
+                      )}
+                      {plan.savings && (
+                        <div className="text-sm text-green-500 font-medium mt-1">
+                          {plan.savings}
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex flex-col flex-grow justify-between space-y-4">
+                    <div className="space-y-3">
+                      {plan.features.map((feature, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {plan.id !== 'cadet' && (
+                      hasActivePlan() ? (
+                        <Button variant="outline" className="w-full mt-6" disabled>
+                          {subscription?.plan_name === plan.name ? 'Current Plan' : 'Choose Plan'}
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={() => handlePayment(plan.id, plan.name)}
+                          disabled={payingPlanId === plan.id}
+                        >
+                          {payingPlanId === plan.id ? 'Opening Razorpay…' : 'Choose Plan'}
+                        </Button>
+                      )
+                    )}
+
+                    {plan.id === 'cadet' && !hasActivePlan() && (
+                      <Button variant="secondary" className="w-full mt-6" disabled>
+                        Current Plan
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Footer Note */}
