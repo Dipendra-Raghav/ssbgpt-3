@@ -847,7 +847,7 @@ const SRT = () => {
                           });
                           
                           setTimeout(() => {
-                            window.location.href = '/results';
+                            window.location.href = '/results?test=srt';
                           }, 1500);
                          } catch (error: any) {
                           console.error('Evaluation error:', error);
