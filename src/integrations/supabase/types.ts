@@ -22,10 +22,8 @@ export type Database = {
           id: string
           improved_response: string | null
           improvements: string[] | null
-          olq_scores: Json | null
           overall_score: number | null
           score: number | null
-          session_id: string | null
           strengths: string[] | null
           test_type: string
           updated_at: string
@@ -38,10 +36,8 @@ export type Database = {
           id?: string
           improved_response?: string | null
           improvements?: string[] | null
-          olq_scores?: Json | null
           overall_score?: number | null
           score?: number | null
-          session_id?: string | null
           strengths?: string[] | null
           test_type: string
           updated_at?: string
@@ -54,10 +50,8 @@ export type Database = {
           id?: string
           improved_response?: string | null
           improvements?: string[] | null
-          olq_scores?: Json | null
           overall_score?: number | null
           score?: number | null
-          session_id?: string | null
           strengths?: string[] | null
           test_type?: string
           updated_at?: string
@@ -817,10 +811,6 @@ export type Database = {
           participant_count: number
           room_id: string
         }[]
-      }
-      reset_daily_credits: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
       }
     }
     Enums: {

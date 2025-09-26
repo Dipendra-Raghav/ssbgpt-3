@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,26 +11,15 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseService = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
-    // Call the existing reset_daily_credits function
-    const { error } = await supabaseService.rpc('reset_daily_credits');
-
-    if (error) {
-      console.error("Error calling reset_daily_credits:", error);
-      throw error;
-    }
-
-    console.log("Daily credits refill completed successfully");
+    // Daily credits refill is no longer needed as we removed daily free credits
+    // This function is kept for backward compatibility but does nothing
+    
+    console.log("Daily credits refill called but no longer needed - daily free credits removed");
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Daily credits refill completed" 
+        message: "Daily credits refill no longer needed - feature removed" 
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -41,7 +29,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in daily-credits-refill:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
