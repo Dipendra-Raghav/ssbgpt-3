@@ -508,7 +508,8 @@ const WAT = () => {
       return;
     }
 
-    if (!credits || credits.wat_credits <= 0) {
+    // Check if user has sufficient credits for the selected practice count
+    if (!credits || credits.wat_credits < practiceCount) {
       setShowCreditPopup(true);
       return;
     }
@@ -516,7 +517,7 @@ const WAT = () => {
     // Consume credit and start test
     try {
       setLoading(true);
-      const result = await consumeCredit('wat');
+      const result = await consumeCredit('wat', practiceCount);
       if (result.success) {
         await startTest();
         await fetchCredits(); // Refresh credits display

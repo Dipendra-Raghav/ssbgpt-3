@@ -213,14 +213,15 @@ const SRT = () => {
       return;
     }
 
-    if (!credits || credits.srt_credits <= 0) {
+    // Check if user has sufficient credits for the selected practice count  
+    if (!credits || credits.srt_credits < practiceCount) {
       setShowCreditPopup(true);
       return;
     }
 
     try {
       setStarting(true);
-      const result = await consumeCredit('srt');
+      const result = await consumeCredit('srt', practiceCount);
       if (result.success) {
         await startTest();
         await fetchCredits();

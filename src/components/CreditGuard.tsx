@@ -10,9 +10,10 @@ interface CreditGuardProps {
   testType: 'wat' | 'srt' | 'ppdt';
   children: React.ReactNode;
   onCreditConsumed?: () => void;
+  itemCount?: number; // Number of items user wants to practice
 }
 
-export function CreditGuard({ testType, children, onCreditConsumed }: CreditGuardProps) {
+export function CreditGuard({ testType, children, onCreditConsumed, itemCount = 1 }: CreditGuardProps) {
   const { user } = useAuth();
   const { checkCredits, consumeCredit, loading } = useCredits();
   const [canTakeTest, setCanTakeTest] = useState<boolean | null>(null);
@@ -24,18 +25,18 @@ export function CreditGuard({ testType, children, onCreditConsumed }: CreditGuar
     const checkTestAccess = async () => {
       if (!user) return;
 
-      const result = await checkCredits(testType);
+      const result = await checkCredits(testType, itemCount);
       setCanTakeTest(result.can_take_test);
       setCreditsLeft(result.credits || 0);
       setHasUnlimited(result.has_unlimited || false);
     };
 
     checkTestAccess();
-  }, [user, testType, checkCredits]);
+  }, [user, testType, checkCredits, itemCount]);
 
   const handleStartTest = async () => {
     if (!hasUnlimited) {
-      const result = await consumeCredit(testType);
+      const result = await consumeCredit(testType, itemCount);
       if (!result.success) {
         setCanTakeTest(false);
         return;
@@ -71,7 +72,7 @@ export function CreditGuard({ testType, children, onCreditConsumed }: CreditGuar
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              You don't have enough credits to take the {testNames[testType]}.
+              You need {itemCount} credits to take the {testNames[testType]}, but you have {creditsLeft} remaining.
             </p>
             <div className="space-y-2">
               <Button 
@@ -97,7 +98,7 @@ export function CreditGuard({ testType, children, onCreditConsumed }: CreditGuar
       {!hasUnlimited && (
         <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500 rounded-lg">
           <p className="text-sm text-yellow-700 dark:text-yellow-300 text-center">
-            ⚡ You have {creditsLeft} credits remaining for this test. 
+            ⚡ You have {creditsLeft} credits remaining. This test will consume {itemCount} credits. 
             <Button 
               variant="link" 
               className="p-0 h-auto font-semibold text-yellow-700 dark:text-yellow-300"

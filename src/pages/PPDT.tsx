@@ -273,14 +273,15 @@ const PPDT = () => {
       return;
     }
 
-    if (!credits || credits.ppdt_credits <= 0) {
+    // Check if user has sufficient credits for the selected practice count
+    if (!credits || credits.ppdt_credits < practiceCount) {
       setShowCreditPopup(true);
       return;
     }
 
     try {
       setStarting(true);
-      const result = await consumeCredit('ppdt');
+      const result = await consumeCredit('ppdt', practiceCount);
       if (result.success) {
         await startTest();
         await fetchCredits();

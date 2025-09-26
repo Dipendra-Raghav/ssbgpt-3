@@ -40,17 +40,9 @@ export function DashboardQuotaPanel() {
       return 'Unlimited';
     }
 
-    // For WAT and SRT, show daily format if initial quota is exhausted
-    if (testType === 'wat' || testType === 'srt') {
-      const initialQuota = testType === 'wat' ? 5 : 5;
-      if (currentCredits < initialQuota) {
-        return `${currentCredits}/daily`;
-      }
-      return `${currentCredits}/${initialQuota}`;
-    }
-
-    // For PPDT, always show out of initial quota
-    return `${currentCredits}/3`;
+    // Show current credits out of initial quota based on new system
+    const initialQuota = testType === 'wat' ? 10 : testType === 'srt' ? 10 : 2;
+    return `${currentCredits}/${initialQuota}`;
   };
 
   const getVariant = (currentCredits: number) => {
