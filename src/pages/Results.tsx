@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Image,
   Zap,
@@ -69,6 +70,8 @@ const Results = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ppdt');
   const [expandedEvaluations, setExpandedEvaluations] = useState<Set<string>>(new Set());
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('test') || 'wat';
 
   const fetchEvaluations = useCallback(async () => {
     try {
@@ -202,18 +205,22 @@ const Results = () => {
             return (
               <div key={index} className="border rounded-lg p-4 bg-card">
                 {/* Image at the top */}
-                {imageUrl && (
-                  <div className="mb-4">
-                    <img
-                      src={imageUrl}
-                      alt={`PPDT stimulus image ${index + 1}`}
-                      className="rounded-lg w-full max-w-sm mx-auto"
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center justify-center mb-3">
-                  <Badge variant={getScoreBadge(score)}>Score: {score}/5</Badge>
+                <div className="relative flex flex-col items-center justify-center mb-4">
+                  {imageUrl && (
+                    <div className="relative w-full flex justify-center">
+                      <img
+                        src={imageUrl}
+                        alt={`PPDT stimulus image ${index + 1}`}
+                        className="rounded-lg w-full max-w-sm mx-auto"
+                      />
+                      <Badge
+                        variant={getScoreBadge(score)}
+                        className="absolute top-4 right-4 z-10"
+                      >
+                        Score: {score}/5
+                      </Badge>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -345,37 +352,23 @@ const Results = () => {
           <p className="text-sm text-destructive/90">{item.analysis}</p>
         </div>
 
-        {/* Improved Responses in Horizontal Tabs */}
-        {(item.improved_response_1 || item.improved_response_2 || item.improved_response_3 || item.improved_response) && (
-          <div className="mt-4">
-            <Tabs defaultValue="response1" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="response1">Improved Response 1</TabsTrigger>
-                <TabsTrigger value="response2">Improved Response 2</TabsTrigger>
-                <TabsTrigger value="response3">Improved Response 3</TabsTrigger>
-              </TabsList>
-              <TabsContent value="response1" className="mt-4">
-                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <p className="text-sm text-green-300 whitespace-pre-wrap">
-                    {item.improved_response_1 || item.improved_response || 'No improved response available'}
-                  </p>
-                </div>
-              </TabsContent>
-              <TabsContent value="response2" className="mt-4">
-                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <p className="text-sm text-green-300 whitespace-pre-wrap">
-                    {item.improved_response_2 || 'No improved response available'}
-                  </p>
-                </div>
-              </TabsContent>
-              <TabsContent value="response3" className="mt-4">
-                <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
-                  <p className="text-sm text-green-300 whitespace-pre-wrap">
-                    {item.improved_response_3 || 'No improved response available'}
-                  </p>
-                </div>
-              </TabsContent>
-            </Tabs>
+        {(item.improved_response_1 || item.improved_response_2 || item.improved_response_3) && (
+          <div className="p-3 rounded border bg-green-500/10 border-green-500/30">
+            <div className="flex items-center gap-2 mb-1">
+              <Star className="w-4 h-4 text-green-300" />
+              <span className="text-sm font-medium text-green-300">Improved Responses:</span>
+            </div>
+            <div className="space-y-2">
+              {item.improved_response_1 && (
+                <p className="text-sm text-green-300"><span className="font-bold">1)</span> {item.improved_response_1}</p>
+              )}
+              {item.improved_response_2 && (
+                <p className="text-sm text-green-300"><span className="font-bold">2)</span> {item.improved_response_2}</p>
+              )}
+              {item.improved_response_3 && (
+                <p className="text-sm text-green-300"><span className="font-bold">3)</span> {item.improved_response_3}</p>
+              )}
+            </div>
           </div>
         )}
       </>
@@ -427,7 +420,7 @@ const Results = () => {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="ppdt" className="flex items-center gap-2">
             <Image className="w-4 h-4" />
@@ -468,7 +461,7 @@ const Results = () => {
                           </div>
                           <div className="flex items-center gap-2">
                               <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
-                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                                Overall Score: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
                               </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
@@ -525,7 +518,7 @@ const Results = () => {
                           </div>
                           <div className="flex items-center gap-2">
                               <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
-                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                                Overall Score: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
                               </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
@@ -582,7 +575,7 @@ const Results = () => {
                           </div>
                           <div className="flex items-center gap-2">
                               <Badge variant={getScoreBadge(evaluation.overall_score || 0)}>
-                                Overall: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
+                                Overall Score: {evaluation.overall_score != null ? evaluation.overall_score : 'N/A'}/5
                               </Badge>
                             {expandedEvaluations.has(evaluation.id) ? (
                               <ChevronDown className="w-4 h-4" />
