@@ -39,9 +39,9 @@ export function useCredits() {
           .from('user_credits')
           .insert({
             user_id: user.id,
-            wat_credits: 5,
-            srt_credits: 5,
-            ppdt_credits: 3,
+            wat_credits: 10,
+            srt_credits: 10,
+            ppdt_credits: 2,
             has_unlimited: false,
           })
           .select('wat_credits, srt_credits, ppdt_credits, has_unlimited')
@@ -64,12 +64,12 @@ export function useCredits() {
     }
   };
 
-  const checkCredits = async (testType: 'wat' | 'srt' | 'ppdt') => {
+  const checkCredits = async (testType: 'wat' | 'srt' | 'ppdt', itemCount: number = 1) => {
     if (!session) return { can_take_test: false, credits: 0 };
 
     try {
       const { data, error } = await supabaseClient.functions.invoke('manage-credits', {
-        body: { action: 'check', test_type: testType },
+        body: { action: 'check', test_type: testType, item_count: itemCount },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -83,12 +83,12 @@ export function useCredits() {
     }
   };
 
-  const consumeCredit = async (testType: 'wat' | 'srt' | 'ppdt') => {
+  const consumeCredit = async (testType: 'wat' | 'srt' | 'ppdt', itemCount: number = 1) => {
     if (!session) return { success: false };
 
     try {
       const { data, error } = await supabaseClient.functions.invoke('manage-credits', {
-        body: { action: 'consume', test_type: testType },
+        body: { action: 'consume', test_type: testType, item_count: itemCount },
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

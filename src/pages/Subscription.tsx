@@ -25,22 +25,21 @@ const subscriptionPlans = [
     badge: null,
     starCount: 1,
     features: [
-      'Signup – 5 WAT, 5 SRT, 3 PPDT free',
-      'Daily 1 WAT and 1 SRT free',
-      'Unlimited Room Access'
+      'Signup – 10 WAT, 10 SRT, 2 PPDT free',
+      'No daily free WAT or SRT',
+      'Limited Room Access'
     ]
   },
   {
     id: 'lieutenant',
     name: 'Lieutenant',
-    price: '₹149',
-    originalPrice: '₹299',
-    savings: 'Early Bird Price',
+    price: '₹299',
+    originalPrice: '₹349',
+    savings: '14% OFF',
     duration: 'per month',
     badge: null,
     starCount: 2,
     features: [
-      'Everything in Cadet',
       'Unlimited WAT, SRT and PPDT',
       'Early Access to Rooms'
     ]
@@ -49,32 +48,46 @@ const subscriptionPlans = [
     id: 'major',
     name: 'Major',
     price: '₹749',
-    originalPrice: '₹1800',
-    savings: 'Save ₹1051 (1 month free)',
-    duration: '6 months',
+    originalPrice: '₹999',
+    savings: '25% OFF',
+    duration: '3 months',
     badge: 'BEST VALUE',
     starCount: 3,
     features: [
-      'Everything in Lieutenant',
-      'Best Value for 6 months',
-      'Effective Monthly: ₹125 (vs ₹149 in Monthly)',
-      'Pay for 5 months, get 1 free'
+      'Unlimited WAT, SRT and PPDT',
+      'Early Access to Rooms',
+      'Private Rooms Access'
     ]
   },
   {
     id: 'brigadier',
     name: 'Brigadier',
-    price: '₹1499',
-    originalPrice: '₹3600',
-    savings: 'Save ₹2101 (2 months free)',
-    duration: '12 months',
-    badge: 'MOST POPULAR',
+    price: '₹1299',
+    originalPrice: '₹2100',
+    savings: '38% OFF',
+    duration: '6 months',
+    badge: 'POPULAR',
     starCount: 4,
     features: [
-      'Everything in Major',
-      'Effective Monthly: ₹125 (vs ₹149 in Monthly)',
-      'Pay for 10 months, get 2 free',
-      '1 Mock Interview with 3x Recommended Candidate (Free)'
+      'Unlimited WAT, SRT and PPDT',
+      'Early Access to Rooms',
+      'Private Rooms Access'
+    ]
+  },
+  {
+    id: 'general',
+    name: 'General',
+    price: '₹2499',
+    originalPrice: '₹4199',
+    savings: '40% OFF',
+    duration: '12 months',
+    badge: 'PREMIUM',
+    starCount: 5,
+    features: [
+      'Unlimited WAT, SRT and PPDT',
+      'Early Access to Rooms',
+      'Private Rooms Access',
+      '1 Mock Interview with 3x Recommended Candidate'
     ]
   }
 ];
@@ -115,7 +128,7 @@ const Subscription = () => {
 
   const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
 
-  const handlePayment = async (planId: string, amount: number, planName: string) => {
+  const handlePayment = async (planId: string, planName: string) => {
     if (!user || !session) {
       toast.error('Please login to subscribe');
       return;
@@ -126,7 +139,7 @@ const Subscription = () => {
       // Create subscription order and ensure Razorpay is loaded in parallel
       const [orderResult] = await Promise.all([
         supabaseClient.functions.invoke('create-subscription', {
-          body: { planId, planName, amount, currency: 'INR' },
+          body: { planId, planName },
           headers: { Authorization: `Bearer ${session.access_token}` },
         }),
         loadRazorpay(),
@@ -186,12 +199,6 @@ const Subscription = () => {
     } finally {
       setPayingPlanId(null);
     }
-  };
-
-  const getPlanAmount = (plan: any) => {
-    if (plan.price === 'Free') return 0;
-    const priceStr = plan.price.replace('₹', '');
-    return parseInt(priceStr);
   };
 
   return (
@@ -264,7 +271,7 @@ const Subscription = () => {
                   ) : (
                     <Button
                       className="w-full mt-6 bg-primary text-primary-foreground hover:bg-primary/90"
-                      onClick={() => handlePayment(plan.id, getPlanAmount(plan), plan.name)}
+                      onClick={() => handlePayment(plan.id, plan.name)}
                       disabled={payingPlanId === plan.id}
                     >
                       {payingPlanId === plan.id ? 'Opening Razorpay…' : 'Choose Plan'}

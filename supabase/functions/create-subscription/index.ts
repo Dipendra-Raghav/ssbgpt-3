@@ -9,9 +9,15 @@ const corsHeaders = {
 interface CreateSubscriptionRequest {
   planId: string;
   planName: string;
-  amount: number;
-  currency: string;
 }
+
+// Secure plan mapping
+const PLAN_MAPPING: Record<string, { amount: number; duration: number; currency: string }> = {
+  'lieutenant': { amount: 299, duration: 1, currency: 'INR' },
+  'major': { amount: 749, duration: 3, currency: 'INR' },
+  'brigadier': { amount: 1299, duration: 6, currency: 'INR' },
+  'general': { amount: 2499, duration: 12, currency: 'INR' },
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -33,15 +39,25 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    const { planId, planName, amount, currency }: CreateSubscriptionRequest = await req.json();
+    const { planId, planName }: CreateSubscriptionRequest = await req.json();
 
-    // Validate input
-    if (!planId || !planName || !currency || typeof amount !== "number" || amount <= 0) {
+    // Validate input and get secure plan details
+    if (!planId || !planName) {
       return new Response(
         JSON.stringify({ error: "Invalid subscription payload" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
+
+    const planDetails = PLAN_MAPPING[planId];
+    if (!planDetails) {
+      return new Response(
+        JSON.stringify({ error: "Invalid plan ID" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    const { amount, duration, currency } = planDetails;
 
     // Create Razorpay order
     const keyId = Deno.env.get("RAZORPAY_KEY_ID");
@@ -94,7 +110,7 @@ serve(async (req) => {
     );
 
     const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year subscription
+    expiresAt.setMonth(expiresAt.getMonth() + duration);
 
     const { error: subscriptionError } = await supabaseService
       .from("subscriptions")

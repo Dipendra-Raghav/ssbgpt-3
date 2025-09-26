@@ -9,6 +9,7 @@ const corsHeaders = {
 interface ManageCreditsRequest {
   action: "consume" | "check";
   test_type: "wat" | "srt" | "ppdt";
+  item_count?: number; // Number of items (words/situations/images) for the test
 }
 
 serve(async (req) => {
@@ -31,7 +32,7 @@ serve(async (req) => {
       throw new Error("User not authenticated");
     }
 
-    const { action, test_type }: ManageCreditsRequest = await req.json();
+    const { action, test_type, item_count = 1 }: ManageCreditsRequest = await req.json();
 
     // Get current credits and subscription status
     const { data: creditsData, error: creditsError } = await supabaseClient
@@ -51,9 +52,9 @@ serve(async (req) => {
         .from("user_credits")
         .insert({
           user_id: user.id,
-          wat_credits: 5,
-          srt_credits: 5,
-          ppdt_credits: 3,
+          wat_credits: 10,
+          srt_credits: 10,
+          ppdt_credits: 2,
           has_unlimited: false,
         })
         .select("*")
@@ -85,7 +86,7 @@ serve(async (req) => {
         JSON.stringify({
           has_unlimited: hasUnlimited || false,
           credits: currentCredits,
-          can_take_test: hasUnlimited || currentCredits > 0,
+          can_take_test: hasUnlimited || currentCredits >= item_count,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -108,12 +109,13 @@ serve(async (req) => {
         );
       }
 
-      if (currentCredits <= 0) {
+      if (currentCredits < item_count) {
         return new Response(
           JSON.stringify({
             success: false,
             error: "Insufficient credits",
-            remaining_credits: 0,
+            remaining_credits: currentCredits,
+            required_credits: item_count,
           }),
           {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -122,11 +124,11 @@ serve(async (req) => {
         );
       }
 
-      // Consume one credit
+      // Consume exact number of credits for items
       const { error: updateError } = await supabaseClient
         .from("user_credits")
         .update({
-          [creditField]: currentCredits - 1,
+          [creditField]: currentCredits - item_count,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", user.id);
@@ -139,8 +141,9 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          remaining_credits: currentCredits - 1,
-          message: "Credit consumed successfully",
+          remaining_credits: currentCredits - item_count,
+          consumed_credits: item_count,
+          message: `${item_count} credits consumed successfully`,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
