@@ -4,29 +4,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-if (!openAIApiKey || !supabaseUrl || !supabaseKey) {
-  throw new Error('Missing required environment variables');
-}
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
 };
-interface Message {
-  role: string;
-  content: string | Array<{ type: string; text?: string; image_url?: { url: string; detail: string } }>;
-}
-
-interface TestContent {
-  [key: string]: {
-    word?: string;
-    situation_text?: string;
-    url?: string;
-  };
-}
-
-const SYSTEM_PROMPTS: { [key: string]: string } = {
+const SYSTEM_PROMPTS = {
   wat: `You are an expert SSB WAT evaluator for Indian SSB psychology. Evaluate word→sentence responses with strict 15-second realism, producing concise, constructive feedback that reflects Officer-Like Qualities (OLQs). Output ONLY the JSON object described below, with no extra text, markdown, or keys.
 
 Assess for these OLQs:
@@ -147,7 +130,7 @@ serve(async (req)=>{
     });
     // Fetch test responses with their associated words/situations
     let responses = [];
-    let testContent: TestContent = {};
+    let testContent = {};
     const { data: respData, error: responsesError } = await supabase.from('test_responses').select('*').in('id', responseIds).eq('user_id', userId).eq('test_type', testType);
     if (responsesError) {
       console.error('Error fetching test responses:', responsesError);
@@ -198,7 +181,7 @@ serve(async (req)=>{
     }
     // Prepare evaluation content based on test type
     let userContent = '';
-    const messages: Message[] = [
+    const messages = [
       {
         role: 'system',
         content: SYSTEM_PROMPTS[testType]
@@ -345,23 +328,26 @@ Provide evaluation focusing on psychological insights, word associations, senten
         }
       }
     }
-    // Validate required fields
-    if (!evaluation.overall_rating) {
-      throw new Error('Missing overall_rating in OpenAI response');
+    // For PPDT, you need to add the image URL back into the evaluation object
+    if (testType === 'ppdt' && evaluation.individual_analysis) {
+      evaluation.individual_analysis.forEach((analysisItem, index)=>{
+        const correspondingResponse = responses[index];
+        if (correspondingResponse) {
+          const imageUrl = testContent[correspondingResponse.image_id]?.url;
+          if (imageUrl) {
+            // Add the imageUrl to the object that will be saved
+            analysisItem.image_url = imageUrl;
+          }
+        }
+      });
     }
-    // Calculate overall score (convert 1-5 to 0-100 scale)
     // Save evaluation to database - only keep essential fields
     const { data: savedEvaluation, error: saveError } = await supabase.from('evaluations').insert({
       user_id: userId,
       test_type: testType,
       overall_score: Math.round(evaluation.overall_score),
       analysis: evaluation.rationale,
-      detailed_analysis: {
-        rating: evaluation.overall_rating,
-        rationale: evaluation.rationale,
-        individual_analysis: evaluation.individual_analysis || [],
-        raw_evaluation: evaluation
-      }
+      detailed_analysis: evaluation
     }).select().single();
     if (saveError) {
       console.error('Error saving evaluation:', saveError);
@@ -383,7 +369,7 @@ Provide evaluation focusing on psychological insights, word associations, senten
     console.error('Error in openai-evaluation function:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Internal server error',
+      error: error.message || 'Internal server error',
       message: 'Evaluation failed'
     }), {
       headers: {
