@@ -813,7 +813,7 @@ const WAT = () => {
           });
           
           setTimeout(() => {
-            window.location.href = '/results';
+            window.location.href = '/results?test=wat';
           }, 1500);
        } catch (error: any) {
          console.error('Evaluation error:', error);
