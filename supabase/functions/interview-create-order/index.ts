@@ -116,7 +116,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in interview-create-order:", error);
     return new Response(
-      JSON.stringify({ error: error.message ?? "Internal Server Error" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Internal Server Error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
