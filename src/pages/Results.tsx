@@ -267,6 +267,17 @@ const Results = () => {
                         </div>
                       )}
 
+                      {/* PIQ Relevance Analysis */}
+                      {ppdtItem.piq_relevance && (
+                        <div className="p-3 rounded border bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Edit3 className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-600">PIQ Relevance Analysis:</span>
+                          </div>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">{ppdtItem.piq_relevance}</p>
+                        </div>
+                      )}
+
                       {/* Improved Stories in Horizontal Tabs */}
                       {(ppdtItem.improved_story_1 || ppdtItem.improved_story_2) && (
                         <div className="mt-4">

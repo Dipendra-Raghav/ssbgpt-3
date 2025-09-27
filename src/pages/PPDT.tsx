@@ -872,16 +872,34 @@ const PPDT = () => {
                              return;
                            }
 
-                          const responseIds = responses.map(r => r.id);
-                          console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'ppdt', responseIds });
-                          
-                          const { data, error } = await supabase.functions.invoke('openai-evaluation', {
-                            body: { 
-                              userId: user?.id, 
-                              testType: 'ppdt', 
-                              responseIds
-                            }
-                          });
+                           const responseIds = responses.map(r => r.id);
+                           
+                           // Fetch PIQ summary if available
+                           let piqSummary = null;
+                           try {
+                             const { data: piqData } = await supabase
+                               .from('piq_forms')
+                               .select('piq_summary')
+                               .eq('user_id', user?.id)
+                               .single();
+                             
+                             if (piqData?.piq_summary) {
+                               piqSummary = piqData.piq_summary;
+                             }
+                           } catch (error) {
+                             console.log('No PIQ form found for user, continuing without PIQ analysis');
+                           }
+                           
+                           console.log('Calling OpenAI evaluation with:', { userId: user?.id, testType: 'ppdt', responseIds, hasPiqSummary: !!piqSummary });
+                           
+                           const { data, error } = await supabase.functions.invoke('openai-evaluation', {
+                             body: { 
+                               userId: user?.id, 
+                               testType: 'ppdt', 
+                               responseIds,
+                               piqSummary
+                             }
+                           });
                            console.log('Evaluation response:', { data, error });
                            
                            if (error) {

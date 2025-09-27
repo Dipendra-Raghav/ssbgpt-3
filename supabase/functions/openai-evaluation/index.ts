@@ -2,8 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -85,7 +85,7 @@ Provide individual ratings for these specific criteria:
 
 CRITICAL EVALUATION REQUIREMENTS:
 1. Generate Two improved stories for ANY score below 5/5
-2.. You MUST evaluate ALL situations provided in the situation list - every single situation must have an individual analysis entry 
+2. You MUST evaluate ALL situations provided in the situation list - every single situation must have an individual analysis entry 
 
 JSON structure:
 {
@@ -99,7 +99,8 @@ JSON structure:
       "pros": "Key strengths demonstrated in the response",
       "cons": "Areas that need improvement or were lacking",
       "improved_story_1": "Enhanced version showing clearer OLQs and better narrative structure",
-      "improved_story_2": "Alternative enhanced story with different OLQ emphasis", 
+      "improved_story_2": "Alternative enhanced story with different OLQ emphasis",
+      "piq_relevance": "If PIQ summary provided: Analyze how well the story aligns with candidate's background, suggest improvements for better authenticity. If no PIQ: 'Please fill PIQ form for personalized relevance analysis.'"
     }
   ]
 }`
@@ -112,7 +113,7 @@ serve(async (req)=>{
   }
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { userId, testType, responseIds } = await req.json();
+    const { userId, testType, responseIds, piqSummary } = await req.json();
     console.log('Processing OpenAI evaluation for user:', userId, 'test:', testType);
     // Validate required parameters
     if (!userId || !testType || !Array.isArray(responseIds) || responseIds.length === 0) {
@@ -130,7 +131,7 @@ serve(async (req)=>{
     });
     // Fetch test responses with their associated words/situations
     let responses = [];
-    let testContent = {};
+    let testContent: Record<string, any> = {};
     const { data: respData, error: responsesError } = await supabase.from('test_responses').select('*').in('id', responseIds).eq('user_id', userId).eq('test_type', testType);
     if (responsesError) {
       console.error('Error fetching test responses:', responsesError);
@@ -181,21 +182,30 @@ serve(async (req)=>{
     }
     // Prepare evaluation content based on test type
     let userContent = '';
-    const messages = [
+    const messages: any[] = [
       {
         role: 'system',
-        content: SYSTEM_PROMPTS[testType]
+        content: SYSTEM_PROMPTS[testType as keyof typeof SYSTEM_PROMPTS]
       }
     ];
     if (testType === 'ppdt') {
       // For PPDT, send each image with its corresponding story individually
       const contentItems = [];
       // Add text explaining the evaluation task
+      const piqContext = piqSummary ? `
+
+PIQ SUMMARY FOR RELEVANCE ANALYSIS:
+${piqSummary}
+
+When evaluating, consider how well each story aligns with this candidate's background, experiences, and character as described in their PIQ. Provide specific suggestions for making stories more authentic to their profile.` : `
+
+PIQ SUMMARY: Not provided. For piq_relevance field, use: "Please fill PIQ form for personalized relevance analysis."`;
+
       contentItems.push({
         type: 'text',
         text: `Please evaluate these PPDT image(s) and story responses individually:
 
-${responses.map((r, i)=>`Image ${i + 1} Story: ${r.response_text || 'No response provided'}`).join('\n\n')}
+${responses.map((r, i)=>`Image ${i + 1} Story: ${r.response_text || 'No response provided'}`).join('\n\n')}${piqContext}
 
 IMPORTANT: You must provide individual analysis for ALL ${responses.length} PPDT images and stories listed above. For any image where the user story shows "No response provided", mark it with score 0 and note "No response provided" in the analysis.
 
@@ -330,7 +340,7 @@ Provide evaluation focusing on psychological insights, word associations, senten
     }
     // For PPDT, you need to add the image URL back into the evaluation object
     if (testType === 'ppdt' && evaluation.individual_analysis) {
-      evaluation.individual_analysis.forEach((analysisItem, index)=>{
+      evaluation.individual_analysis.forEach((analysisItem: any, index: number) => {
         const correspondingResponse = responses[index];
         if (correspondingResponse) {
           const imageUrl = testContent[correspondingResponse.image_id]?.url;
@@ -365,11 +375,11 @@ Provide evaluation focusing on psychological insights, word associations, senten
       },
       status: 200
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in openai-evaluation function:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Internal server error',
+      error: error?.message || 'Internal server error',
       message: 'Evaluation failed'
     }), {
       headers: {
