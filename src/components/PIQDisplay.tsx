@@ -1,16 +1,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { User, Shield, GraduationCap, Trophy, Edit } from "lucide-react";
+import { User, Shield, GraduationCap, Trophy, Edit, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface PIQData {
-  selection_board: string;
-  batch_no: string;
-  chest_no: string;
-  roll_no: string;
   full_name: string;
   father_name: string;
+  date_of_birth: string;
+  religion: string;
+  caste_category: string;
+  mother_tongue: string;
+  marital_status: string;
+  state_and_district: string;
   max_residence_place: string;
   max_residence_district: string;
   max_residence_state: string;
@@ -27,10 +29,18 @@ interface PIQData {
   parents_alive: string;
   mother_death_age?: string;
   father_death_age?: string;
+  father_education: string;
   father_occupation: string;
   father_income: string;
+  mother_education: string;
   mother_occupation: string;
   mother_income: string;
+  guardian_name?: string;
+  guardian_education?: string;
+  guardian_occupation?: string;
+  guardian_income?: string;
+  siblings_details?: any[];
+  educational_record?: any[];
   age_years: string;
   age_months: string;
   height: string;
@@ -47,6 +57,7 @@ interface PIQData {
   service_choice: string;
   previous_attempts: string;
   previous_ssb_details?: string;
+  piq_summary?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -69,12 +80,14 @@ const PIQDisplay = ({ data, onEdit }: PIQDisplayProps) => {
       title: "Personal Information",
       icon: User,
       fields: [
-        { label: "Selection Board", value: data.selection_board },
-        { label: "Batch No", value: data.batch_no },
-        { label: "Chest No", value: data.chest_no },
-        { label: "Roll No", value: data.roll_no },
         { label: "Full Name", value: data.full_name },
         { label: "Father's Name", value: data.father_name },
+        { label: "Date of Birth", value: data.date_of_birth },
+        { label: "Religion", value: data.religion },
+        { label: "Caste Category", value: data.caste_category },
+        { label: "Mother Tongue", value: data.mother_tongue },
+        { label: "Marital Status", value: data.marital_status },
+        { label: "State & District", value: data.state_and_district },
       ]
     },
     {
@@ -103,26 +116,26 @@ const PIQDisplay = ({ data, onEdit }: PIQDisplayProps) => {
         { label: "Parents Alive", value: data.parents_alive === 'yes' ? 'Yes' : 'No' },
         { label: "Mother's Death Age", value: data.mother_death_age },
         { label: "Father's Death Age", value: data.father_death_age },
+        { label: "Father's Education", value: data.father_education },
         { label: "Father's Occupation", value: data.father_occupation },
         { label: "Father's Income", value: data.father_income },
+        { label: "Mother's Education", value: data.mother_education },
         { label: "Mother's Occupation", value: data.mother_occupation },
         { label: "Mother's Income", value: data.mother_income },
+        { label: "Guardian Name", value: data.guardian_name },
+        { label: "Guardian Education", value: data.guardian_education },
+        { label: "Guardian Occupation", value: data.guardian_occupation },
+        { label: "Guardian Income", value: data.guardian_income },
       ]
     },
     {
-      title: "Physical Details",
+      title: "Physical Details & Current Status",
       icon: GraduationCap,
       fields: [
         { label: "Age (Years)", value: data.age_years },
         { label: "Age (Months)", value: data.age_months },
         { label: "Height", value: data.height },
         { label: "Weight", value: data.weight },
-      ]
-    },
-    {
-      title: "Current Status",
-      icon: GraduationCap,
-      fields: [
         { label: "Present Occupation", value: data.present_occupation },
         { label: "Personal Income", value: data.personal_income },
         { label: "NCC Training", value: data.ncc_training === 'yes' ? 'Yes' : 'No' },
@@ -177,6 +190,83 @@ const PIQDisplay = ({ data, onEdit }: PIQDisplayProps) => {
           )}
         </CardHeader>
       </Card>
+
+      {/* PIQ Summary Section */}
+      {data.piq_summary && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="w-5 h-5" />
+              PIQ Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted p-4 rounded-lg">
+              <pre className="whitespace-pre-wrap text-sm font-mono">
+                {data.piq_summary}
+              </pre>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Siblings Details */}
+      {data.siblings_details && data.siblings_details.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <User className="w-5 h-5" />
+              Siblings Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {data.siblings_details.map((sibling: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Sibling {index + 1}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DisplayField label="Relationship" value={sibling.relationship} />
+                    <DisplayField label="Education" value={sibling.education} />
+                    <DisplayField label="Occupation" value={sibling.occupation} />
+                    <DisplayField label="Income" value={sibling.income} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Educational Records */}
+      {data.educational_record && data.educational_record.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <GraduationCap className="w-5 h-5" />
+              Educational Record
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {data.educational_record.map((record: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Record {index + 1}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DisplayField label="Qualification" value={record.qualification} />
+                    <DisplayField label="Institution" value={record.institution} />
+                    <DisplayField label="Board/University" value={record.board} />
+                    <DisplayField label="Year" value={record.year} />
+                    <DisplayField label="Percentage/Division" value={record.percentage} />
+                    <DisplayField label="Medium" value={record.medium} />
+                    <DisplayField label="Type" value={record.boarder} />
+                    <DisplayField label="Achievements" value={record.achievements} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sections */}
       <div className="grid gap-6">
