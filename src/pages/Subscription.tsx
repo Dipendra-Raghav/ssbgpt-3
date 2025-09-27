@@ -109,7 +109,7 @@ const ShieldIcon = ({ starCount }: { starCount: number }) => {
 
 const Subscription = () => {
   const { user, session } = useAuth();
-  const { subscription, hasActivePlan } = useSubscription();
+  const { subscription, hasActivePlan, fetchSubscription } = useSubscription();
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -178,8 +178,8 @@ const Subscription = () => {
             if (verifyError) throw verifyError;
 
             toast.success('Subscription activated successfully! 🎉');
-            // Refresh the page to update credits display
-            window.location.reload();
+            // Fetch latest subscription data instead of reloading the page
+            await fetchSubscription();
           } catch (error: any) {
             toast.error(`Payment verification failed: ${error.message}`);
           }
