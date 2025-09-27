@@ -177,46 +177,6 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Notification Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>
-              Manage how you receive notifications from SSBGPT
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-base">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive updates about your test results and progress
-                </p>
-              </div>
-              <Switch
-                checked={emailNotifications}
-                onCheckedChange={setEmailNotifications}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-base">Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about new features and reminders
-                </p>
-              </div>
-              <Switch
-                checked={pushNotifications}
-                onCheckedChange={setPushNotifications}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Subscription Information */}
         <Card>
           <CardHeader>
@@ -280,33 +240,7 @@ const Settings = () => {
           </CardContent>
         </Card>
 
-        {/* Privacy Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Privacy & Security
-            </CardTitle>
-            <CardDescription>
-              Control your privacy settings and data sharing preferences
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-base">Data Sharing for Improvement</Label>
-                <p className="text-sm text-muted-foreground">
-                  Allow anonymous data sharing to help improve our AI assessments
-                </p>
-              </div>
-              <Switch
-                checked={dataSharing}
-                onCheckedChange={setDataSharing}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
+        {/* Account Actions */}
         {/* Account Actions */}
         <Card>
           <CardHeader>
@@ -320,18 +254,7 @@ const Settings = () => {
               <Button variant="outline" onClick={handleSignOut}>
                 Sign Out
               </Button>
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteAccount}
-                className="flex items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Account
-              </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Account deletion will permanently remove all your data. This action cannot be undone.
-            </p>
           </CardContent>
         </Card>
       </div>
