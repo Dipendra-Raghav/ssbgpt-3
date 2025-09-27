@@ -231,30 +231,39 @@ export type Database = {
           achievements: Json
           age_months: string | null
           age_years: string | null
-          batch_no: string | null
           career_motivation: Json
-          chest_no: string | null
+          caste_category: string | null
           commission_nature: string | null
           created_at: string
+          date_of_birth: string | null
           educational_background: Json
+          educational_record: Json | null
           extra_curricular_activities: string | null
           father_death_age: string | null
+          father_education: string | null
           father_income: string | null
           father_name: string | null
           father_occupation: string | null
           full_name: string | null
           games_and_sports: string | null
+          guardian_education: string | null
+          guardian_income: string | null
+          guardian_name: string | null
+          guardian_occupation: string | null
           height: string | null
           hobbies: string | null
           id: string
           is_district_hq: string | null
+          marital_status: string | null
           max_residence_district: string | null
           max_residence_place: string | null
           max_residence_population: string | null
           max_residence_state: string | null
           mother_death_age: string | null
+          mother_education: string | null
           mother_income: string | null
           mother_occupation: string | null
+          mother_tongue: string | null
           ncc_details: string | null
           ncc_training: string | null
           parents_alive: string | null
@@ -264,6 +273,7 @@ export type Database = {
           permanent_residence_state: string | null
           personal_income: string | null
           personal_info: Json
+          piq_summary: string | null
           positions_of_responsibility: string | null
           present_occupation: string | null
           present_residence_district: string | null
@@ -272,9 +282,10 @@ export type Database = {
           present_residence_state: string | null
           previous_attempts: string | null
           previous_ssb_details: string | null
-          roll_no: string | null
-          selection_board: string | null
+          religion: string | null
           service_choice: string | null
+          siblings_details: Json | null
+          state_and_district: string | null
           updated_at: string
           user_id: string
           weight: string | null
@@ -283,30 +294,39 @@ export type Database = {
           achievements?: Json
           age_months?: string | null
           age_years?: string | null
-          batch_no?: string | null
           career_motivation?: Json
-          chest_no?: string | null
+          caste_category?: string | null
           commission_nature?: string | null
           created_at?: string
+          date_of_birth?: string | null
           educational_background?: Json
+          educational_record?: Json | null
           extra_curricular_activities?: string | null
           father_death_age?: string | null
+          father_education?: string | null
           father_income?: string | null
           father_name?: string | null
           father_occupation?: string | null
           full_name?: string | null
           games_and_sports?: string | null
+          guardian_education?: string | null
+          guardian_income?: string | null
+          guardian_name?: string | null
+          guardian_occupation?: string | null
           height?: string | null
           hobbies?: string | null
           id?: string
           is_district_hq?: string | null
+          marital_status?: string | null
           max_residence_district?: string | null
           max_residence_place?: string | null
           max_residence_population?: string | null
           max_residence_state?: string | null
           mother_death_age?: string | null
+          mother_education?: string | null
           mother_income?: string | null
           mother_occupation?: string | null
+          mother_tongue?: string | null
           ncc_details?: string | null
           ncc_training?: string | null
           parents_alive?: string | null
@@ -316,6 +336,7 @@ export type Database = {
           permanent_residence_state?: string | null
           personal_income?: string | null
           personal_info?: Json
+          piq_summary?: string | null
           positions_of_responsibility?: string | null
           present_occupation?: string | null
           present_residence_district?: string | null
@@ -324,9 +345,10 @@ export type Database = {
           present_residence_state?: string | null
           previous_attempts?: string | null
           previous_ssb_details?: string | null
-          roll_no?: string | null
-          selection_board?: string | null
+          religion?: string | null
           service_choice?: string | null
+          siblings_details?: Json | null
+          state_and_district?: string | null
           updated_at?: string
           user_id: string
           weight?: string | null
@@ -335,30 +357,39 @@ export type Database = {
           achievements?: Json
           age_months?: string | null
           age_years?: string | null
-          batch_no?: string | null
           career_motivation?: Json
-          chest_no?: string | null
+          caste_category?: string | null
           commission_nature?: string | null
           created_at?: string
+          date_of_birth?: string | null
           educational_background?: Json
+          educational_record?: Json | null
           extra_curricular_activities?: string | null
           father_death_age?: string | null
+          father_education?: string | null
           father_income?: string | null
           father_name?: string | null
           father_occupation?: string | null
           full_name?: string | null
           games_and_sports?: string | null
+          guardian_education?: string | null
+          guardian_income?: string | null
+          guardian_name?: string | null
+          guardian_occupation?: string | null
           height?: string | null
           hobbies?: string | null
           id?: string
           is_district_hq?: string | null
+          marital_status?: string | null
           max_residence_district?: string | null
           max_residence_place?: string | null
           max_residence_population?: string | null
           max_residence_state?: string | null
           mother_death_age?: string | null
+          mother_education?: string | null
           mother_income?: string | null
           mother_occupation?: string | null
+          mother_tongue?: string | null
           ncc_details?: string | null
           ncc_training?: string | null
           parents_alive?: string | null
@@ -368,6 +399,7 @@ export type Database = {
           permanent_residence_state?: string | null
           personal_income?: string | null
           personal_info?: Json
+          piq_summary?: string | null
           positions_of_responsibility?: string | null
           present_occupation?: string | null
           present_residence_district?: string | null
@@ -376,9 +408,10 @@ export type Database = {
           present_residence_state?: string | null
           previous_attempts?: string | null
           previous_ssb_details?: string | null
-          roll_no?: string | null
-          selection_board?: string | null
+          religion?: string | null
           service_choice?: string | null
+          siblings_details?: Json | null
+          state_and_district?: string | null
           updated_at?: string
           user_id?: string
           weight?: string | null
@@ -805,6 +838,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_piq_summary: {
+        Args: { piq_data: Json }
+        Returns: string
+      }
       get_room_participant_counts: {
         Args: { p_room_ids: string[] }
         Returns: {
