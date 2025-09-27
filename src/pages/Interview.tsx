@@ -186,7 +186,6 @@ const Interview = () => {
           body: { 
             interviewerId: selectedInterviewer.id,
             slotId: selectedSlot,
-            amount: 399
           },
           headers: { 
             Authorization: `Bearer ${session.access_token}`

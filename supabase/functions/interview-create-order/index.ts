@@ -9,8 +9,10 @@ const corsHeaders = {
 interface CreateInterviewOrderRequest {
   interviewerId: string;
   slotId: string;
-  amount: number;
 }
+
+// Securely define the interview cost on the backend to prevent manipulation
+const INTERVIEW_COST_INR = 399;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -42,11 +44,12 @@ serve(async (req) => {
     }
     const user = authData.user;
 
-    const { interviewerId, slotId, amount }: CreateInterviewOrderRequest = await req.json();
+    // Only accept interviewerId and slotId from the request
+    const { interviewerId, slotId }: CreateInterviewOrderRequest = await req.json();
 
-    if (!interviewerId || !slotId || typeof amount !== "number" || amount <= 0) {
+    if (!interviewerId || !slotId) {
       return new Response(
-        JSON.stringify({ error: "Missing or invalid fields: interviewerId, slotId, amount" }),
+        JSON.stringify({ error: "Missing fields: interviewerId, slotId" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -86,7 +89,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: amount * 100,
+        // Use the hardcoded amount from the backend, not the user input
+        amount: INTERVIEW_COST_INR * 100,
         currency: "INR",
         receipt: `int_${user.id.slice(0, 8)}_${Date.now()}`,
         notes: { user_id: user.id, interviewer_id: interviewerId, slot_id: slotId },
